@@ -18,7 +18,7 @@ const Page = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([]);
-  const { goToUpload, goToDocument, goToDocumentEdit, goToChat } =
+  const { goToUpload, goToDocument, goToDocumentEdit } =
     useDocumentNavigation();
 
   useEffect(() => {
