@@ -30,6 +30,15 @@ export interface Document {
   thumbnailUrl?: string;
   pageCount?: number;
   description?: string;
+  // Phase 4 additions
+  chatEnabled: boolean;
+  lastChatSession?: string;
+  totalChats: number;
+  processingMetadata?: {
+    totalChunks: number;
+    vectorized: boolean;
+    lastProcessedAt: Date;
+  };
 }
 
 export interface DocumentUploadData {
@@ -44,6 +53,13 @@ export interface DocumentUploadData {
   thumbnailUrl?: string;
   pageCount?: number;
   description?: string;
+  chatEnabled: boolean;
+  totalChats: number;
+  processingMetadata?: {
+    totalChunks: number;
+    vectorized: boolean;
+    lastProcessedAt: Date;
+  };
 }
 
 export interface DocumentUpdateData {
@@ -52,4 +68,12 @@ export interface DocumentUpdateData {
   status?: Document["status"];
   thumbnailUrl?: string;
   pageCount?: number;
+  chatEnabled?: boolean;
+  lastChatSession?: string;
+  totalChats?: number;
+  processingMetadata?: {
+    totalChunks: number;
+    vectorized: boolean;
+    lastProcessedAt: Date;
+  };
 }

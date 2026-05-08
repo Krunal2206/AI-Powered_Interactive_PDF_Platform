@@ -68,6 +68,8 @@ export async function getUserDocuments(userId: string): Promise<Document[]> {
         thumbnailUrl: data.thumbnailUrl,
         pageCount: data.pageCount,
         description: data.description,
+        chatEnabled: data.chatEnabled,
+        totalChats: data.totalChats,
       };
     })
   } catch (error) {
