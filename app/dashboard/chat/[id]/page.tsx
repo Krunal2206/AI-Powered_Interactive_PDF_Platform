@@ -94,7 +94,7 @@ const page = () => {
             <Button
               variant="ghost"
               onClick={() => goToDocument(documentId)}
-              className="text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 p-2"
+              className="cursor-pointer text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 p-2"
             >
               <ArrowLeft size={16} className="mr-0 sm:mr-2" />
               <span className="hidden sm:inline">Back to Document</span>
