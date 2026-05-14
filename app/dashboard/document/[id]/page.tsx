@@ -125,7 +125,7 @@ const DocumentViewPage = () => {
           <Button
             variant="ghost"
             onClick={goToDashboard}
-            className="text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 mb-4 p-2"
+            className="cursor-pointer text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 mb-4 p-2"
           >
             <ArrowLeft size={16} className="mr-1" />
             Back to Documents
