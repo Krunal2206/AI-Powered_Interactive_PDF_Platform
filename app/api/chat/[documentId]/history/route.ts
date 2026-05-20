@@ -11,7 +11,7 @@ export async function GET(
     const { userId } = await auth();
     throwIfUnauthorized(userId);
 
-    const { documentId } = params;
+    const { documentId } = await params;
 
     // Get all sessions for this document
     const sessions = await getDocumentSessions(documentId);
