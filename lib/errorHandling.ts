@@ -4,7 +4,7 @@ export class ChatError extends Error {
   constructor(
     message: string,
     public readonly statusCode: number = 500,
-    public readonly code?: string
+    public readonly code?: string,
   ) {
     super(message);
     this.name = "ChatError";
@@ -17,25 +17,26 @@ export const handleChatError = (error: unknown) => {
   if (error instanceof ChatError) {
     return NextResponse.json(
       { error: error.message, code: error.code },
-      { status: error.statusCode }
+      { status: error.statusCode },
     );
   }
 
   if (error instanceof Error) {
     return NextResponse.json(
       { error: "Internal server error", message: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
   return NextResponse.json(
     { error: "An unexpected error occurred" },
-    { status: 500 }
+    { status: 500 },
   );
 };
 
-export const throwIfUnauthorized = (session: any) => {
-  if (!session || !session.user) {
+// Fixed: was checking session.user, but Clerk passes userId as a plain string
+export const throwIfUnauthorized = (userId: string | null | undefined) => {
+  if (!userId) {
     throw new ChatError("Unauthorized", 401, "UNAUTHORIZED");
   }
 };
