@@ -168,7 +168,7 @@ const page = () => {
                       ×
                     </button>
                   </div>
-                  <div className="flex-1 overflow-scroll">
+                  <div className="flex-1 overflow-y-auto">
                     <ChatPanel document={document} isVisible={true} />
                   </div>
                 </div>

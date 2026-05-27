@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,19 @@ const DocumentViewPage = () => {
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
+  const [pageWidth, setPageWidth] = useState<number>(800);
+
+  const computePageWidth = useCallback(() => {
+    return Math.min(window.innerWidth - 100, 800);
+  }, []);
+
+  useEffect(() => {
+    setPageWidth(computePageWidth());
+
+    const handleResize = () => setPageWidth(computePageWidth());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [computePageWidth]);
 
   const documentId = params.id as string;
 
@@ -395,7 +408,7 @@ const DocumentViewPage = () => {
               >
                 <Page
                   pageNumber={pageNumber}
-                  width={Math.min(window.innerWidth - 100, 800)}
+                  width={pageWidth}
                   className="shadow-lg"
                 />
               </ReactPDFDocument>
