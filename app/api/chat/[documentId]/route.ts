@@ -15,7 +15,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { documentId } = params;
+    const { documentId } = await params;
     const body = await request.json();
     const { message, sessionId } = body;
 

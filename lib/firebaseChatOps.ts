@@ -50,7 +50,7 @@ export const addChatMessage = async (
       content,
       role,
       createdAt: serverTimestamp() as Timestamp,
-      metadata,
+      ...(metadata !== undefined && { metadata }),
     };
 
     const messageDoc = await addDoc(messagesRef, newMessage);
