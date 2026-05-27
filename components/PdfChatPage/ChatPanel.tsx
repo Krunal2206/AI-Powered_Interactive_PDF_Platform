@@ -9,24 +9,23 @@ import { ChatInput } from "./ChatInput";
 import { LoadingIndicator } from "./LoadingIndicator";
 import { usePDFProcessing } from "@/hooks/usePDFProcessing";
 import { ProcessingStatus } from "./ProcessingStatus";
+import { useChat } from "@/hooks/useChat";
+import { useUser } from "@clerk/nextjs";
 
 interface ChatPanelProps {
   document: DocumentType;
   isVisible: boolean;
 }
 
-interface Message {
-  id: string;
-  type: "user" | "bot";
-  content: string;
-  timestamp: Date;
-}
-
 export const ChatPanel = ({ document, isVisible }: ChatPanelProps) => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { user } = useUser();
+
+  const { messages, isLoading, error, sendMessage, clearError } = useChat(
+    document.id,
+    user?.id ?? "",
+  );
 
   const {
     processingState,
@@ -36,70 +35,31 @@ export const ChatPanel = ({ document, isVisible }: ChatPanelProps) => {
   } = usePDFProcessing();
 
   useEffect(() => {
-    // Check if document is already processed when component mounts
     if (document?.id) {
       checkProcessingStatus(document.id);
     }
   }, [document?.id, checkProcessingStatus]);
 
+  // Scroll to bottom whenever messages change
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, [messages, isLoading]);
 
   const handleProcessDocument = async () => {
-    if (document?.id) {
-      await processDocument(document.id);
-    }
+    if (document?.id) await processDocument(document.id);
   };
 
   const handleReprocessDocument = async () => {
-    if (document?.id) {
-      await reprocessDocument(document.id);
-    }
+    if (document?.id) await reprocessDocument(document.id);
   };
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
+    if (!inputMessage.trim() || isLoading) return;
+    if (!processingState.isProcessed) return;
 
-    // Check if document is processed before allowing chat
-    if (!processingState.isProcessed) {
-      const warningMessage: Message = {
-        id: Date.now().toString(),
-        type: "bot",
-        content:
-          "Please process the document first before asking questions. Click the 'Process Document' button above.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, warningMessage]);
-      return;
-    }
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: "user",
-      content: inputMessage,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInputMessage("");
-    setIsLoading(true);
-
-    // TODO: Replace with actual AI API call
-    setTimeout(() => {
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: "bot",
-        content: `Based on the document "${document?.title}", I can help you with: "${inputMessage}". Here's what I found in the PDF...`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, botMessage]);
-      setIsLoading(false);
-    }, 1000);
+    const msg = inputMessage;
+    setInputMessage(""); // Clear input immediately for better UX
+    await sendMessage(msg);
   };
 
   if (!isVisible) return null;
@@ -108,7 +68,6 @@ export const ChatPanel = ({ document, isVisible }: ChatPanelProps) => {
     <div className="w-full lg:w-96 flex flex-col bg-slate-900/30 backdrop-blur-sm">
       <ChatHeader />
 
-      {/* Processing Status Section */}
       <ProcessingStatus
         document={document}
         processingState={processingState}
@@ -118,8 +77,7 @@ export const ChatPanel = ({ document, isVisible }: ChatPanelProps) => {
 
       <ScrollArea className="flex-1 p-4 h-32">
         <div className="space-y-4">
-          {/* Welcome message when no messages */}
-          {messages.length === 0 && (
+          {messages.length === 0 && !isLoading && (
             <div className="text-center text-slate-400 py-8">
               <div className="max-w-64 mx-auto">
                 <h3 className="text-sm font-medium mb-2">Ready to chat!</h3>
@@ -137,6 +95,19 @@ export const ChatPanel = ({ document, isVisible }: ChatPanelProps) => {
           ))}
 
           {isLoading && <LoadingIndicator />}
+
+          {error && (
+            <div className="bg-red-900/20 border border-red-800 rounded-lg px-4 py-3 flex items-start justify-between gap-2">
+              <p className="text-red-400 text-sm">{error}</p>
+              <button
+                onClick={clearError}
+                className="text-red-400 hover:text-red-300 text-lg leading-none flex-shrink-0"
+                aria-label="Dismiss error"
+              >
+                ×
+              </button>
+            </div>
+          )}
         </div>
         <div ref={messagesEndRef} />
       </ScrollArea>
