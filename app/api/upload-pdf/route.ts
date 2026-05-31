@@ -1,5 +1,6 @@
 import cloudinary from "@/cloudinary";
 import { addDocument } from "@/lib/firebaseops";
+import { uploadLimiter, applyRateLimit } from "@/lib/rateLimit";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -9,6 +10,10 @@ export async function POST(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Rate limit: 5 uploads per 10 minutes
+    const blocked = applyRateLimit(uploadLimiter, userId);
+    if (blocked) return blocked;
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -42,7 +47,7 @@ export async function POST(request: NextRequest) {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
             resource_type: "raw",
-            folder: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET,
+            folder: process.env.CLOUDINARY_UPLOAD_FOLDER,
             public_id: `pdf_${Date.now()}`,
             use_filename: true,
             unique_filename: false,
