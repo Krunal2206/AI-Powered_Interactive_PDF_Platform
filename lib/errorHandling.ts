@@ -48,7 +48,7 @@ export const throwIfInvalidDocument = (documentId: string) => {
 };
 
 export const throwIfMissingMessage = (message: string) => {
-  if (!message || !message.trim()) {
+  if (!message?.trim()) {
     throw new ChatError("Message content is required", 400, "MISSING_MESSAGE");
   }
 };

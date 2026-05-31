@@ -11,6 +11,7 @@ import {
   generateMissingEmbeddings,
   getProcessingStats,
 } from "@/lib/firebaseChunkOps";
+import { processLimiter, applyRateLimit } from "@/lib/rateLimit";
 
 export async function POST(
   request: NextRequest,
