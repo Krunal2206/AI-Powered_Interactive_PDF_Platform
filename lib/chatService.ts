@@ -19,10 +19,10 @@ const PROMPT_TEMPLATE = `Context: {context}
 Question: {question}`;
 
 export class ChatService {
-  private model: GoogleGenerativeAI;
-  private documentId: string;
+  private readonly model: GoogleGenerativeAI;
+  private readonly documentId: string;
   private sessionId?: string;
-  private userId: string;
+  private readonly userId: string;
   private vectorStore?: VectorStoreService;
 
   constructor(documentId: string, userId: string, sessionId?: string) {
