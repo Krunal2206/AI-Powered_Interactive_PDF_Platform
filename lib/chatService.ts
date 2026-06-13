@@ -8,13 +8,13 @@ import {
 } from "./firebaseChatOps";
 import { ChatMessage } from "@/types/chat";
 
-const SYSTEM_TEMPLATE = `You are a helpful AI assistant for answering questions about PDF documents.
-Use the following pieces of context to answer the question at the end.
+const SYSTEM_INSTRUCTION = `You are a helpful AI assistant for answering questions about PDF documents.
+Use the provided context to answer the user's questions.
 If you don't know the answer, just say you don't know. DO NOT try to make up an answer.
 If the question is not about the context, politely inform them that you can only answer questions about the document.
-Always format your responses in Markdown.
+Always format your responses in Markdown.`;
 
-Context: {context}
+const PROMPT_TEMPLATE = `Context: {context}
 
 Question: {question}`;
 
@@ -44,8 +44,14 @@ export class ChatService {
       if (!this.vectorStore) {
         throw new Error("Vector store not initialized");
       }
-      const chunks = await this.vectorStore.searchSimilarChunks(query, this.documentId, { topK: 3 });
-      return chunks.map(chunk => new Document({ pageContent: chunk.content }));
+      const chunks = await this.vectorStore.searchSimilarChunks(
+        query,
+        this.documentId,
+        { topK: 3 },
+      );
+      return chunks.map(
+        (chunk) => new Document({ pageContent: chunk.content }),
+      );
     } catch (error) {
       console.error("Error retrieving relevant documents:", error);
       throw error;
@@ -55,30 +61,37 @@ export class ChatService {
   private async generateResponse(
     prompt: string,
     context: string,
-    history: ChatMessage[]
+    history: ChatMessage[],
   ): Promise<string> {
-    const model = this.model.getGenerativeModel({ model: "gemini-pro" });
+    const model = this.model.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction: SYSTEM_INSTRUCTION,
+    });
     const chat = model.startChat({
-      history: history.map(msg => ({
+      history: history.map((msg) => ({
         role: msg.role === "user" ? "user" : "model",
-        parts: [{ text: msg.content }]
+        parts: [{ text: msg.content }],
       })),
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 2048
-      }
+        maxOutputTokens: 2048,
+      },
     });
 
-    const formattedPrompt = SYSTEM_TEMPLATE
-      .replace("{context}", context)
-      .replace("{question}", prompt);
+    const formattedPrompt = PROMPT_TEMPLATE.replace(
+      "{context}",
+      context,
+    ).replace("{question}", prompt);
 
     const result = await chat.sendMessage([{ text: formattedPrompt }]);
     const response = result.response.text();
     return response;
   }
 
-  public async chat(message: string, onToken: (token: string) => void): Promise<string> {
+  public async chat(
+    message: string,
+    onToken: (token: string) => void,
+  ): Promise<string> {
     try {
       // Get or create session
       if (!this.sessionId) {

@@ -95,7 +95,8 @@ const DocumentViewPage = () => {
   };
 
   const handleDelete = async () => {
-    confirmDelete();
+    const confirmed = confirmDelete();
+    if (!confirmed) return;
 
     try {
       await deleteDocument(documentId);

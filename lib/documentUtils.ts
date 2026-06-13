@@ -24,7 +24,7 @@ export const getStatusColor = (status: Document["status"]): string => {
 };
 
 export const confirmDelete = (
-  message: string = "Are you sure you want to delete this document?"
+  message: string = "Are you sure you want to delete this document?",
 ): boolean => {
   return window.confirm(message);
 };
