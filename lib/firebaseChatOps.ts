@@ -38,13 +38,12 @@ export const addChatMessage = async (
   sessionId: string,
   content: string,
   role: "user" | "assistant",
-  metadata?: ChatMessage["metadata"]
+  metadata?: ChatMessage["metadata"],
 ) => {
   try {
     const messagesRef = collection(db, "chat-messages");
     const sessionRef = doc(db, "chat-sessions", sessionId);
 
-    // Add the message
     const newMessage: Omit<ChatMessage, "id"> = {
       sessionId,
       content,
@@ -55,7 +54,6 @@ export const addChatMessage = async (
 
     const messageDoc = await addDoc(messagesRef, newMessage);
 
-    // Update session
     await updateDoc(sessionRef, {
       lastMessage: content,
       messageCount: (await getDoc(sessionRef)).data()?.messageCount + 1 || 1,
@@ -75,7 +73,7 @@ export const getChatHistory = async (sessionId: string) => {
     const q = query(
       messagesRef,
       where("sessionId", "==", sessionId),
-      orderBy("createdAt", "asc")
+      orderBy("createdAt", "asc"),
     );
 
     const querySnapshot = await getDocs(q);
@@ -95,7 +93,7 @@ export const getUserSessions = async (userId: string) => {
     const q = query(
       sessionsRef,
       where("userId", "==", userId),
-      orderBy("updatedAt", "desc")
+      orderBy("updatedAt", "desc"),
     );
 
     const querySnapshot = await getDocs(q);
@@ -109,14 +107,27 @@ export const getUserSessions = async (userId: string) => {
   }
 };
 
-export const getDocumentSessions = async (documentId: string) => {
+export const getDocumentSessions = async (
+  documentId: string,
+  userId?: string,
+) => {
   try {
     const sessionsRef = collection(db, "chat-sessions");
-    const q = query(
-      sessionsRef,
-      where("documentId", "==", documentId),
-      orderBy("updatedAt", "desc")
-    );
+
+    // When userId is provided (server-side calls), always filter by it
+    // to prevent one user from reading another user's chat sessions
+    const q = userId
+      ? query(
+          sessionsRef,
+          where("documentId", "==", documentId),
+          where("userId", "==", userId),
+          orderBy("updatedAt", "desc"),
+        )
+      : query(
+          sessionsRef,
+          where("documentId", "==", documentId),
+          orderBy("updatedAt", "desc"),
+        );
 
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map((doc) => ({

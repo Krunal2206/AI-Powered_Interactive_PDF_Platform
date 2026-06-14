@@ -4,6 +4,7 @@ import { getDocument } from "@/lib/firebaseops";
 import { ChatService } from "@/lib/chatService";
 import { getDocumentSessions } from "@/lib/firebaseChatOps";
 import { isDocumentProcessed } from "@/lib/firebaseChunkOps";
+import { chatLimiter, applyRateLimit } from "@/lib/rateLimit";
 
 export async function POST(
   request: NextRequest,
@@ -14,6 +15,9 @@ export async function POST(
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const blocked = applyRateLimit(chatLimiter, userId);
+    if (blocked) return blocked;
 
     const { documentId } = await params;
     const body = await request.json();
@@ -56,8 +60,8 @@ export async function POST(
 
     const response = await chatService.chat(message.trim(), () => {});
 
-    // Retrieve the session ID that ChatService created or reused
-    const sessions = await getDocumentSessions(documentId);
+    // Pass userId so we only retrieve sessions belonging to this user
+    const sessions = await getDocumentSessions(documentId, userId);
     const currentSessionId =
       sessions.length > 0 ? sessions[0].id : (sessionId ?? null);
 

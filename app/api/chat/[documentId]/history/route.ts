@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { getDocumentSessions, getChatHistory } from "@/lib/firebaseChatOps";
 import { auth } from "@clerk/nextjs/server";
 import { throwIfUnauthorized } from "@/lib/errorHandling";
+import { getDocument } from "@/lib/firebaseops";
 
 export async function GET(
   request: Request,
-  { params }: { params: { documentId: string } }
+  { params }: { params: { documentId: string } },
 ) {
   try {
     const { userId } = await auth();
@@ -13,10 +14,22 @@ export async function GET(
 
     const { documentId } = await params;
 
-    // Get all sessions for this document
-    const sessions = await getDocumentSessions(documentId);
+    // Verify the requesting user owns this document
+    const document = await getDocument(documentId);
+    if (!document) {
+      return NextResponse.json(
+        { error: "Document not found" },
+        { status: 404 },
+      );
+    }
 
-    // Get chat history for the most recent session if it exists
+    if (document.userId !== userId) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    // Now safe to fetch sessions — we know the document belongs to this user
+    const sessions = await getDocumentSessions(documentId, userId);
+
     const history =
       sessions.length > 0 ? await getChatHistory(sessions[0].id) : [];
 
@@ -28,7 +41,7 @@ export async function GET(
     console.error("Error fetching chat history:", error);
     return NextResponse.json(
       { error: "Failed to fetch chat history" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
