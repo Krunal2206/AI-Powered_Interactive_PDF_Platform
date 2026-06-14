@@ -4,7 +4,13 @@ import { Button } from "@/components/ui/button";
 import { getDocument } from "@/lib/firebaseops";
 import { useDocumentNavigation } from "@/lib/navigationUtils";
 import { useUser } from "@clerk/nextjs";
-import { ArrowLeft, FileText, Maximize2, MessageSquare, Minimize2 } from "lucide-react";
+import {
+  ArrowLeft,
+  FileText,
+  Maximize2,
+  MessageSquare,
+  Minimize2,
+} from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Document as DocumentType } from "@/types/upload";
@@ -14,7 +20,7 @@ import { LoadingSpinner } from "@/components/DashboardPage/LoadingSpinner";
 import { ErrorMessage } from "@/components/DashboardPage/ErrorMessage";
 import { ChatPanel } from "@/components/PdfChatPage/ChatPanel";
 
-const page = () => {
+const Page = () => {
   const params = useParams();
   const documentId = params.id as string;
   const { user } = useUser();
@@ -24,17 +30,25 @@ const page = () => {
   const [error, setError] = useState<string | null>(null);
   const [document, setDocument] = useState<DocumentType | null>(null);
   const { isMobile } = useResponsive();
-  const [showChat, setShowChat] = useState(!isMobile);
+  const [showChat, setShowChat] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (showChat === null) {
+      setShowChat(!isMobile);
+    }
+  }, [isMobile, showChat]);
+
+  useEffect(() => {
+    if (showChat !== null) {
+      setShowChat(!isMobile);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     if (documentId && user?.id) {
       fetchDocument();
     }
   }, [documentId, user?.id]);
-
-  useEffect(() => {
-    setShowChat(!isMobile);
-  }, [isMobile]);
 
   const fetchDocument = async () => {
     try {
@@ -62,17 +76,16 @@ const page = () => {
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
-    // Close chat when entering fullscreen
     if (!isFullscreen) {
       setShowChat(false);
     }
   };
 
   const toggleChat = () => {
-    setShowChat(!showChat);
+    setShowChat((prev) => !prev);
   };
 
-    if (loading) {
+  if (loading) {
     return <LoadingSpinner />;
   }
 
@@ -85,6 +98,8 @@ const page = () => {
       />
     );
   }
+
+  const chatResolved = showChat !== null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 inset-0 overflow-auto">
@@ -115,8 +130,7 @@ const page = () => {
           </div>
 
           <div className="flex items-center space-x-2">
-            {/* Always show chat button on mobile, and on desktop when not fullscreen */}
-            {(isMobile || !isFullscreen) && (
+            {chatResolved && (isMobile || !isFullscreen) && (
               <Button
                 variant="outline"
                 size="sm"
@@ -147,16 +161,12 @@ const page = () => {
         </div>
       </div>
 
-      <div
-        className={
-          "flex flex-col lg:flex-row h-[calc(100vh-64px)] sm:h-[calc(100vh-80px)] relative"
-        }
-      >
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] sm:h-[calc(100vh-80px)] relative">
         {document && (
           <>
             <PDFViewer document={document} isFullscreen={isFullscreen} />
 
-            {isMobile && showChat && (
+            {chatResolved && isMobile && showChat && (
               <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end">
                 <div className="w-full bg-slate-900 rounded-t-xl max-h-[85vh] flex flex-col">
                   <div className="flex justify-between items-center p-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
@@ -175,7 +185,7 @@ const page = () => {
               </div>
             )}
 
-            {!isMobile && !isFullscreen && showChat && (
+            {chatResolved && !isMobile && !isFullscreen && showChat && (
               <ChatPanel document={document} isVisible={true} />
             )}
           </>
@@ -185,4 +195,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;
