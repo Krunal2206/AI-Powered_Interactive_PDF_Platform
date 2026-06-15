@@ -11,13 +11,15 @@ import { usePDFProcessing } from "@/hooks/usePDFProcessing";
 import { ProcessingStatus } from "./ProcessingStatus";
 import { useChat } from "@/hooks/useChat";
 import { useUser } from "@clerk/nextjs";
+import { InlineErrorBoundary } from "@/components/ErrorBoundary";
 
 interface ChatPanelProps {
   document: DocumentType;
   isVisible: boolean;
 }
 
-export const ChatPanel = ({ document, isVisible }: ChatPanelProps) => {
+// Inner component — wrapped by the boundary below
+const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
@@ -40,7 +42,6 @@ export const ChatPanel = ({ document, isVisible }: ChatPanelProps) => {
     }
   }, [document?.id, checkProcessingStatus]);
 
-  // Scroll to bottom whenever messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
@@ -58,7 +59,7 @@ export const ChatPanel = ({ document, isVisible }: ChatPanelProps) => {
     if (!processingState.isProcessed) return;
 
     const msg = inputMessage;
-    setInputMessage(""); // Clear input immediately for better UX
+    setInputMessage("");
     await sendMessage(msg);
   };
 
@@ -120,5 +121,13 @@ export const ChatPanel = ({ document, isVisible }: ChatPanelProps) => {
         disabled={!processingState.isProcessed}
       />
     </div>
+  );
+};
+
+export const ChatPanel = ({ document, isVisible }: ChatPanelProps) => {
+  return (
+    <InlineErrorBoundary section="Chat">
+      <ChatPanelInner document={document} isVisible={isVisible} />
+    </InlineErrorBoundary>
   );
 };
