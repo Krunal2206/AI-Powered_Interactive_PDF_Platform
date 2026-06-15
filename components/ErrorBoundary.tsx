@@ -28,8 +28,9 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    const sectionLabel = this.props.section ? ` (${this.props.section})` : "";
     console.error(
-      `[ErrorBoundary]${this.props.section ? ` (${this.props.section})` : ""}`,
+      `[ErrorBoundary]${sectionLabel}`,
       error,
       info.componentStack,
     );
@@ -59,9 +60,9 @@ export class ErrorBoundary extends Component<Props, State> {
 }
 
 interface DefaultErrorUIProps {
-  error: Error | null;
-  section?: string;
-  onReset: () => void;
+  readonly error: Error | null;
+  readonly section?: string;
+  readonly onReset: () => void;
 }
 
 function DefaultErrorUI({ error, section, onReset }: DefaultErrorUIProps) {
@@ -111,9 +112,9 @@ function DefaultErrorUI({ error, section, onReset }: DefaultErrorUIProps) {
 }
 
 interface InlineErrorUIProps {
-  error: Error | null;
-  section?: string;
-  onReset: () => void;
+  readonly error: Error | null;
+  readonly section?: string;
+  readonly onReset: () => void;
 }
 
 export function InlineErrorUI({ error, section, onReset }: InlineErrorUIProps) {
@@ -158,8 +159,9 @@ export class InlineErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    const sectionLabel = this.props.section ? ` (${this.props.section})` : "";
     console.error(
-      `[InlineErrorBoundary]${this.props.section ? ` (${this.props.section})` : ""}`,
+      `[InlineErrorBoundary]${sectionLabel}`,
       error,
       info.componentStack,
     );

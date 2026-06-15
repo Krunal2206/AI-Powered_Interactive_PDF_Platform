@@ -72,9 +72,17 @@ const Navbar = () => {
           <div className="md:hidden py-4 border-t border-white/10">
             <div className="flex flex-col space-y-4">
               <NavigationItems />
-              <button className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 w-full">
-                Get Started
-              </button>
+              <Button
+                asChild
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white w-full"
+              >
+                <Link
+                  href="/dashboard"
+                  className="flex items-center justify-center"
+                >
+                  Get Started
+                </Link>
+              </Button>
             </div>
           </div>
         )}
