@@ -28,6 +28,7 @@ import {
   formatFileSize,
   getStatusColor,
 } from "@/lib/documentUtils";
+import { useToast } from "@/hooks/useToast";
 import { Document as ReactPDFDocument, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -44,6 +45,7 @@ const DocumentViewPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { goToDashboard, goToDocumentEdit, goToChat } = useDocumentNavigation();
+  const toast = useToast();
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
@@ -103,7 +105,7 @@ const DocumentViewPage = () => {
       goToDashboard();
     } catch (error) {
       console.error("Error deleting document:", error);
-      alert("Failed to delete document. Please try again.");
+      toast.error("Failed to delete document. Please try again.");
     }
   };
 

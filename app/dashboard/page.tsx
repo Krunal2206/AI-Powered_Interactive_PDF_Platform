@@ -10,6 +10,7 @@ import { LoadingSpinner } from "@/components/DashboardPage/LoadingSpinner";
 import { DocumentSearchFilters } from "@/components/DashboardPage/DocumentSearchFilters";
 import { AddDocumentCard } from "@/components/DashboardPage/AddDocumentCard";
 import { useDocumentNavigation } from "@/lib/navigationUtils";
+import { useToast } from "@/hooks/useToast";
 
 const Page = () => {
   const { user } = useUser();
@@ -20,6 +21,7 @@ const Page = () => {
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([]);
   const { goToUpload, goToDocument, goToDocumentEdit } =
     useDocumentNavigation();
+  const toast = useToast();
 
   useEffect(() => {
     if (user?.id) {
@@ -78,7 +80,7 @@ const Page = () => {
       setDocuments(documents.filter((doc) => doc.id !== documentId));
     } catch (error) {
       console.error("Error deleting document:", error);
-      alert("Failed to delete document. Please try again.");
+      toast.error("Failed to delete document. Please try again.");
     }
   };
 

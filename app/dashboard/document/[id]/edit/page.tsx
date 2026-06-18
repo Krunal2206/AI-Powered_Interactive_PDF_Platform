@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/DashboardPage/LoadingSpinner";
 import { ErrorMessage } from "@/components/DashboardPage/ErrorMessage";
 import { useDocumentNavigation } from "@/lib/navigationUtils";
+import { useToast } from "@/hooks/useToast";
 
 const DocumentEditPage = () => {
   const params = useParams();
@@ -25,6 +26,7 @@ const DocumentEditPage = () => {
   const [description, setDescription] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
   const {goToDocument, goToDashboard} = useDocumentNavigation();
+  const toast = useToast();
 
   const documentId = params.id as string;
 
@@ -100,7 +102,7 @@ const DocumentEditPage = () => {
       goToDocument(documentId);
     } catch (err) {
       console.error("Error updating document:", err);
-      alert("Failed to save changes. Please try again.");
+      toast.error("Failed to save changes. Please try again.");
     } finally {
       setSaving(false);
     }
