@@ -23,6 +23,21 @@ export const getStatusColor = (status: Document["status"]): string => {
   }
 };
 
+export const getStatusTextColor = (status: Document["status"]): string => {
+  switch (status) {
+    case "ready":
+      return "text-green-400";
+    case "processing":
+      return "text-yellow-400";
+    case "uploading":
+      return "text-blue-400";
+    case "error":
+      return "text-red-400";
+    default:
+      return "text-gray-400";
+  }
+};
+
 export const confirmDelete = (
   message: string = "Are you sure you want to delete this document?",
 ): boolean => {
@@ -32,7 +47,7 @@ export const confirmDelete = (
 export const handleDocumentError = (
   error: unknown,
   defaultMessage: string
-): void => {
+): string => {
   console.error(defaultMessage, error);
-  alert(`${defaultMessage}. Please try again.`);
+  return `${defaultMessage}. Please try again.`;
 };
