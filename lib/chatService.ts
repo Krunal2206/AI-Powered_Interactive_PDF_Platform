@@ -1,5 +1,4 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Document } from "@langchain/core/documents";
 import { VectorStoreService } from "./vectorStore";
 import {
   addChatMessage,
@@ -7,6 +6,10 @@ import {
   getChatHistory,
 } from "./firebaseChatOps";
 import { ChatMessage } from "@/types/chat";
+
+interface RelevantDocument {
+  pageContent: string;
+}
 
 const SYSTEM_INSTRUCTION = `You are a helpful AI assistant for answering questions about PDF documents.
 Use the provided context to answer the user's questions.
@@ -21,9 +24,9 @@ Question: {question}`;
 export class ChatService {
   private readonly model: GoogleGenerativeAI;
   private readonly documentId: string;
-  private sessionId?: string;
   private readonly userId: string;
   private vectorStore?: VectorStoreService;
+  public sessionId?: string;
 
   constructor(documentId: string, userId: string, sessionId?: string) {
     this.model = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
@@ -33,12 +36,10 @@ export class ChatService {
   }
 
   private async initVectorStore() {
-    if (!this.vectorStore) {
-      this.vectorStore = new VectorStoreService();
-    }
+    this.vectorStore ??= new VectorStoreService();
   }
 
-  private async getRelevantDocuments(query: string): Promise<Document[]> {
+  private async getRelevantDocuments(query: string): Promise<RelevantDocument[]> {
     try {
       await this.initVectorStore();
       if (!this.vectorStore) {
@@ -50,7 +51,7 @@ export class ChatService {
         { topK: 3 },
       );
       return chunks.map(
-        (chunk) => new Document({ pageContent: chunk.content }),
+        (chunk) => ({ pageContent: chunk.content }),
       );
     } catch (error) {
       console.error("Error retrieving relevant documents:", error);
@@ -67,6 +68,7 @@ export class ChatService {
       model: "gemini-2.5-flash",
       systemInstruction: SYSTEM_INSTRUCTION,
     });
+
     const chat = model.startChat({
       history: history.map((msg) => ({
         role: msg.role === "user" ? "user" : "model",
@@ -84,8 +86,7 @@ export class ChatService {
     ).replace("{question}", prompt);
 
     const result = await chat.sendMessage([{ text: formattedPrompt }]);
-    const response = result.response.text();
-    return response;
+    return result.response.text();
   }
 
   public async chat(
