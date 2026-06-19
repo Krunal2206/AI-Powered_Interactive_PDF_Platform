@@ -13,7 +13,7 @@ interface PDFViewerProps {
 export const PDFViewer = ({ document, isFullscreen }: PDFViewerProps) => {
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
-  const [scale, setScale] = useState<number>(1.0);
+  const [scale, setScale] = useState<number>(1);
   const [searchTerm, setSearchTerm] = useState("");
 
   const goToPrevPage = () => {
@@ -25,7 +25,7 @@ export const PDFViewer = ({ document, isFullscreen }: PDFViewerProps) => {
   };
 
   const handleZoomIn = () => {
-    setScale((prev) => Math.min(2.0, prev + 0.2));
+    setScale((prev) => Math.min(2, prev + 0.2));
   };
 
   const handleZoomOut = () => {
@@ -65,6 +65,7 @@ export const PDFViewer = ({ document, isFullscreen }: PDFViewerProps) => {
         url={document.cloudinaryUrl}
         pageNumber={pageNumber}
         scale={scale}
+        searchTerm={searchTerm}
         onLoadSuccess={onDocumentLoadSuccess}
         onDownload={handleDownload}
       />

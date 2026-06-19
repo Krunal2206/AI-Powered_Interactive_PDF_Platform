@@ -18,6 +18,7 @@ import { useState } from "react";
 import { Button } from "../ui/button";
 import { Document } from "@/types/upload";
 import { formatDistanceToNow } from "date-fns";
+import { formatFileSize, getStatusTextColor } from "@/lib/documentUtils";
 
 interface DocumentCardProps {
   document: Document;
@@ -35,29 +36,6 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
   onDelete
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  };
-
-  const getStatusColor = (status: Document["status"]) => {
-    switch (status) {
-      case "ready":
-        return "text-green-400";
-      case "processing":
-        return "text-yellow-400";
-      case "uploading":
-        return "text-blue-400";
-      case "error":
-        return "text-red-400";
-      default:
-        return "text-gray-400";
-    }
-  };
 
   return (
     <div className="group relative aspect-[3/4] bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 cursor-pointer hover:shadow-lg hover:shadow-purple-500/10 hover:scale-105 overflow-hidden">
@@ -153,7 +131,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
                 {formatFileSize(document.fileSize)}
               </span>
               <span
-                className={`text-xs font-medium ${getStatusColor(
+                className={`text-xs font-medium ${getStatusTextColor(
                   document.status
                 )}`}
               >
