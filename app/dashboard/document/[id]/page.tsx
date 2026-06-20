@@ -20,7 +20,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { deleteDocument, getDocument } from "@/lib/firebaseops";
 import { Document } from "@/types/upload";
-import { LoadingSpinner } from "@/components/DashboardPage/LoadingSpinner";
+import { DocumentDetailSkeleton } from "@/components/DashboardPage/DocumentDetailSkeleton";
 import { ErrorMessage } from "@/components/DashboardPage/ErrorMessage";
 import { useDocumentNavigation } from "@/lib/navigationUtils";
 import {
@@ -120,7 +120,7 @@ const DocumentViewPage = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return <DocumentDetailSkeleton />;
   }
 
   if (error || !document) {

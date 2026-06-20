@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { Document as DocumentType } from "@/types/upload";
 import { PDFViewer } from "@/components/PdfChatPage/PDFViewer";
 import { useResponsive } from "@/hooks/useResponsive";
-import { LoadingSpinner } from "@/components/DashboardPage/LoadingSpinner";
+import { ChatPageSkeleton } from "@/components/PdfChatPage/ChatPageSkeleton";
 import { ErrorMessage } from "@/components/DashboardPage/ErrorMessage";
 import { ChatPanel } from "@/components/PdfChatPage/ChatPanel";
 
@@ -86,7 +86,7 @@ const Page = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return <ChatPageSkeleton />;
   }
 
   if (error || !document) {

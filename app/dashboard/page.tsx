@@ -6,7 +6,7 @@ import { useUser } from "@clerk/nextjs";
 import { deleteDocument, getUserDocuments } from "@/lib/firebaseops";
 import { Button } from "@/components/ui/button";
 import DocumentCard from "@/components/DashboardPage/DocumentCard";
-import { LoadingSpinner } from "@/components/DashboardPage/LoadingSpinner";
+import { DocumentGridSkeleton } from "@/components/DashboardPage/DocumentCardSkeleton";
 import { DocumentSearchFilters } from "@/components/DashboardPage/DocumentSearchFilters";
 import { AddDocumentCard } from "@/components/DashboardPage/AddDocumentCard";
 import { useDocumentNavigation } from "@/lib/navigationUtils";
@@ -50,7 +50,6 @@ const Page = () => {
   const filterDocuments = () => {
     let filtered = documents;
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(
         (doc) =>
@@ -58,11 +57,10 @@ const Page = () => {
           doc.originalFilename
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          doc.description?.toLowerCase().includes(searchTerm.toLowerCase())
+          doc.description?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
-    // Status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter((doc) => doc.status === statusFilter);
     }
@@ -88,16 +86,20 @@ const Page = () => {
     window.open(document.cloudinaryUrl, "_blank");
   };
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-
   return (
     <div className="p-8 min-h-screen">
       <div className="mb-8">
         <h1 className="text-4xl font-light text-gray-300 mb-2">My Documents</h1>
         <p className="text-slate-400">
-          {documents.length} document{documents.length > 1 ? "s" : ""} stored
+          {loading ? (
+            "Loading documents..."
+          ) : (
+            (() => {
+              const count = documents.length;
+              const pluralSuffix = count === 1 ? "" : "s";
+              return `${count} document${pluralSuffix} stored`;
+            })()
+          )}
         </p>
       </div>
 
@@ -109,35 +111,41 @@ const Page = () => {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        <AddDocumentCard onClick={goToUpload} />
+        {loading ? (
+          <DocumentGridSkeleton count={10} />
+        ) : (
+          <>
+            <AddDocumentCard onClick={goToUpload} />
 
-        {filteredDocuments.map((document) => (
-          <DocumentCard
-            key={document.id}
-            document={document}
-            onView={(document) => goToDocument(document.id)}
-            onEdit={(document) => goToDocumentEdit(document.id)}
-            onDelete={handleDeleteDocument}
-            onDownload={handleDownloadDocument}
-          />
-        ))}
+            {filteredDocuments.map((document) => (
+              <DocumentCard
+                key={document.id}
+                document={document}
+                onView={(document) => goToDocument(document.id)}
+                onEdit={(document) => goToDocumentEdit(document.id)}
+                onDelete={handleDeleteDocument}
+                onDownload={handleDownloadDocument}
+              />
+            ))}
 
-        {filteredDocuments.length === 0 && documents.length > 0 && (
-          <div className="text-center py-12">
-            <p className="text-slate-400 text-lg mb-4">
-              No documents match your search criteria
-            </p>
-            <Button
-              onClick={() => {
-                setSearchTerm("");
-                setStatusFilter("all");
-              }}
-              variant="outline"
-              className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 text-slate-300 border-slate-700/50 cursor-pointer hover:bg-gradient-to-br hover:from-purple-600/10 hover:to-purple-900/10 hover:border-purple-500/50 hover:text-slate-300 transition-all duration-300"
-            >
-              Clear Filters
-            </Button>
-          </div>
+            {filteredDocuments.length === 0 && documents.length > 0 && (
+              <div className="text-center py-12 col-span-full">
+                <p className="text-slate-400 text-lg mb-4">
+                  No documents match your search criteria
+                </p>
+                <Button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setStatusFilter("all");
+                  }}
+                  variant="outline"
+                  className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 text-slate-300 border-slate-700/50 cursor-pointer hover:bg-gradient-to-br hover:from-purple-600/10 hover:to-purple-900/10 hover:border-purple-500/50 hover:text-slate-300 transition-all duration-300"
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
