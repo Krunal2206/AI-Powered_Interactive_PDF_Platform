@@ -30,8 +30,6 @@ import {
 } from "@/lib/documentUtils";
 import { useToast } from "@/hooks/useToast";
 import { Document as ReactPDFDocument, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/Page/AnnotationLayer.css";
-import "react-pdf/dist/Page/TextLayer.css";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
