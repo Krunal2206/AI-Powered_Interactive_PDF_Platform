@@ -4,8 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { pdfjs, Document, Page } from "react-pdf";
 import { FileText } from "lucide-react";
-// import "react-pdf/dist/Page/AnnotationLayer.css";
-// import "react-pdf/dist/Page/TextLayer.css";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
