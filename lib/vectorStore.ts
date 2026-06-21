@@ -27,9 +27,7 @@ export async function deleteDocumentFromVector(documentId: string) {
 
 // Singleton getter
 function getInstance(): VectorStoreService {
-  if (!vectorStoreInstance) {
-    vectorStoreInstance = new VectorStoreService();
-  }
+  vectorStoreInstance ??= new VectorStoreService();
   return vectorStoreInstance;
 }
 
@@ -57,16 +55,16 @@ export interface EmbeddingMetadata {
 }
 
 export class VectorStoreService {
-  private embeddings: GoogleGenerativeAIEmbeddings;
-  private pinecone: Pinecone;
-  private indexName: string;
+  private readonly embeddings: GoogleGenerativeAIEmbeddings;
+  private readonly pinecone: Pinecone;
+  private readonly indexName: string;
   private vectorStore: PineconeStore | null = null;
 
   constructor() {
-    // Initialize Google Generative AI for embeddings
+    // Initialize Google Generative AI for embeddings.
     this.embeddings = new GoogleGenerativeAIEmbeddings({
       apiKey: process.env.GOOGLE_API_KEY!,
-      modelName: "models/embedding-001",
+      modelName: "gemini-embedding-001",
     });
 
     this.pinecone = new Pinecone({
@@ -105,7 +103,7 @@ export class VectorStoreService {
       const embedding = await this.embeddings.embedQuery(cleanedText);
 
       // Verify embedding
-      if (!embedding || embedding.length !== 768) {
+      if (embedding?.length !== 3072) {
         console.warn(`Invalid embedding dimension: ${embedding?.length}`);
         return null;
       }
@@ -135,8 +133,8 @@ export class VectorStoreService {
         const batchChunks = chunks.slice(i, i + batchSize);
         console.log(
           `Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(
-            chunks.length / batchSize
-          )}`
+            chunks.length / batchSize,
+          )}`,
         );
 
         // Prepare documents with cleaned text
@@ -167,7 +165,7 @@ export class VectorStoreService {
           await vectorStore.addDocuments(documents);
           storedCount += documents.length;
           console.log(
-            `Successfully stored batch with ${documents.length} chunks`
+            `Successfully stored batch with ${documents.length} chunks`,
           );
 
           // Add a small delay between batches
@@ -177,7 +175,7 @@ export class VectorStoreService {
         } catch (batchError) {
           console.error(
             `Error processing batch ${Math.floor(i / batchSize) + 1}:`,
-            batchError
+            batchError,
           );
           continue; // Continue with next batch even if this one fails
         }
@@ -204,10 +202,10 @@ export class VectorStoreService {
     options: {
       topK?: number;
       scoreThreshold?: number;
-    } = {}
+    } = {},
   ): Promise<VectorSearchResult[]> {
     try {
-      const { topK = 5, scoreThreshold = 0.7 } = options;
+      const { topK = 5, scoreThreshold = 0.3 } = options;
       const vectorStore = await this.initializeVectorStore();
 
       // First verify we can generate a query embedding
@@ -219,10 +217,10 @@ export class VectorStoreService {
       const results = await vectorStore.similaritySearchWithScore(
         cleanText(query),
         topK,
-        {
-          filter: { documentId: documentId },
-        }
+        { documentId: documentId },
       );
+
+
 
       const searchResults: VectorSearchResult[] = results
         .filter(([_, score]) => score >= scoreThreshold)
@@ -239,7 +237,7 @@ export class VectorStoreService {
         }));
 
       console.log(
-        `Found ${searchResults.length} relevant chunks for query: "${query}"`
+        `Found ${searchResults.length} relevant chunks for query: "${query}"`,
       );
 
       return searchResults;
@@ -259,7 +257,7 @@ export class VectorStoreService {
       const pineconeIndex = this.pinecone.Index(this.indexName);
 
       const queryResponse = await pineconeIndex.query({
-        vector: new Array(768).fill(0),
+        vector: new Array(3072).fill(0),
         topK: 10000,
         includeMetadata: true,
         filter: {
@@ -278,7 +276,7 @@ export class VectorStoreService {
       await pineconeIndex.deleteMany({ ids: vectors });
 
       console.log(
-        `Deleted ${vectors.length} vectors for document: ${documentId}`
+        `Deleted ${vectors.length} vectors for document: ${documentId}`,
       );
 
       return {
