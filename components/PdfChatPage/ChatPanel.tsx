@@ -18,16 +18,13 @@ interface ChatPanelProps {
   isVisible: boolean;
 }
 
-// Inner component — wrapped by the boundary below
 const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
 
-  const { messages, isLoading, error, sendMessage, clearError } = useChat(
-    document.id,
-    user?.id ?? "",
-  );
+  const { messages, isLoading, error, sendMessage, clearError, clearMessages } =
+    useChat(document.id, user?.id ?? "");
 
   const {
     processingState,
@@ -51,7 +48,9 @@ const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
   };
 
   const handleReprocessDocument = async () => {
-    if (document?.id) await reprocessDocument(document.id);
+    if (!document?.id) return;
+    clearMessages();
+    await reprocessDocument(document.id);
   };
 
   const handleSendMessage = async () => {
