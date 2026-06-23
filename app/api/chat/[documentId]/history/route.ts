@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDocumentSessions, getChatHistory } from "@/lib/firebaseChatOps";
 import { auth } from "@clerk/nextjs/server";
 import { throwIfUnauthorized } from "@/lib/errorHandling";
-import { getDocument } from "@/lib/firebaseops";
+import { getDocument, deleteChatData } from "@/lib/firebaseops";
 
 export async function GET(
   request: Request,
@@ -41,6 +41,43 @@ export async function GET(
     console.error("Error fetching chat history:", error);
     return NextResponse.json(
       { error: "Failed to fetch chat history" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { documentId: string } },
+) {
+  try {
+    const { userId } = await auth();
+    throwIfUnauthorized(userId);
+
+    const { documentId } = await params;
+
+    const document = await getDocument(documentId);
+    if (!document) {
+      return NextResponse.json(
+        { error: "Document not found" },
+        { status: 404 },
+      );
+    }
+
+    if (document.userId !== userId) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    await deleteChatData(documentId);
+
+    return NextResponse.json({
+      success: true,
+      message: "Chat history cleared",
+    });
+  } catch (error) {
+    console.error("Error deleting chat history:", error);
+    return NextResponse.json(
+      { error: "Failed to delete chat history" },
       { status: 500 },
     );
   }

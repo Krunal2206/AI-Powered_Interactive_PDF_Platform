@@ -172,7 +172,7 @@ export async function deleteDocument(documentId: string): Promise<void> {
   }
 }
 
-async function deleteChatData(documentId: string): Promise<void> {
+export async function deleteChatData(documentId: string): Promise<void> {
   const sessionsRef = collection(db, "chat-sessions");
   const sessionsQuery = query(
     sessionsRef,

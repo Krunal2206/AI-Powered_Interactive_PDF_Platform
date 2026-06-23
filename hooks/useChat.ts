@@ -14,6 +14,7 @@ interface UseChatReturn {
   sendMessage: (content: string) => Promise<void>;
   clearError: () => void;
   clearMessages: () => void;
+  invalidateHistory: () => Promise<void>;
 }
 
 export function useChat(documentId: string, userId: string): UseChatReturn {
@@ -127,5 +128,20 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
     setSessionId(null);
   }, []);
 
-  return { messages, isLoading, error, sendMessage, clearError, clearMessages };
+  const invalidateHistory = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/chat/${documentId}/history`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        console.error("Failed to delete chat history:", await res.text());
+      }
+    } catch (err) {
+      console.error("Error invalidating chat history:", err);
+    }
+    setMessages([]);
+    setSessionId(null);
+  }, [documentId]);
+
+  return { messages, isLoading, error, sendMessage, clearError, clearMessages, invalidateHistory };
 }
