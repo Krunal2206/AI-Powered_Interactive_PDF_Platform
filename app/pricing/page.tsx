@@ -31,6 +31,7 @@ const plans = [
     ],
     buttonText: "Get Started Free",
     buttonVariant: "outline",
+    href: "/dashboard",
     popular: false,
   },
   {
@@ -52,6 +53,7 @@ const plans = [
     limitations: [],
     buttonText: "Start Pro Trial",
     buttonVariant: "primary",
+    href: "/dashboard",
     popular: true,
   },
   {
@@ -73,6 +75,7 @@ const plans = [
     limitations: [],
     buttonText: "Start Team Trial",
     buttonVariant: "outline",
+    href: "/dashboard",
     popular: false,
   },
   {
@@ -94,6 +97,7 @@ const plans = [
     limitations: [],
     buttonText: "Contact Sales",
     buttonVariant: "outline",
+    href: "mailto:sales@chatwithpdf.com",
     popular: false,
   },
 ];
@@ -138,9 +142,9 @@ const Page = () => {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
-          {plans.map((plan, index) => (
+          {plans.map((plan) => (
             <div
-              key={index}
+              key={plan.name}
               className={`relative rounded-2xl p-8 backdrop-blur-sm border transition-all duration-300 hover:scale-105 ${
                 plan.popular
                   ? "border-purple-500 bg-gradient-to-br from-purple-900/50 to-pink-900/30 shadow-2xl shadow-purple-500/25"
@@ -172,17 +176,20 @@ const Page = () => {
               </div>
 
               <div className="space-y-3 mb-8">
-                {plan.features.map((feature, featureIndex) => (
+                {plan.features.map((feature) => (
                   <div
-                    key={featureIndex}
+                    key={`${plan.name}-${feature}`}
                     className="flex items-center space-x-3"
                   >
                     <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
                     <span className="text-sm">{feature}</span>
                   </div>
                 ))}
-                {plan.limitations.map((limitation, limitIndex) => (
-                  <div key={limitIndex} className="flex items-center space-x-3">
+                {plan.limitations.map((limitation) => (
+                  <div
+                    key={`${plan.name}-${limitation}`}
+                    className="flex items-center space-x-3"
+                  >
                     <X className="w-5 h-5 text-red-400 flex-shrink-0" />
                     <span className="text-sm text-slate-400">{limitation}</span>
                   </div>
@@ -190,13 +197,16 @@ const Page = () => {
               </div>
 
               <Button
+                asChild
                 className={`w-full py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer ${
                   plan.buttonVariant === "primary"
                     ? "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg shadow-purple-500/25"
                     : "border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50"
                 }`}
               >
-                {plan.buttonText}
+                <Link href={plan.href}>
+                  {plan.buttonText}
+                </Link>
               </Button>
             </div>
           ))}
@@ -272,9 +282,9 @@ const Page = () => {
                     team: "Priority",
                     enterprise: "Dedicated",
                   },
-                ].map((row, index) => (
+                ].map((row) => (
                   <TableRow
-                    key={index}
+                    key={row.feature}
                     className="border-b border-slate-700/50"
                   >
                     <TableCell className="p-6 font-medium">
@@ -302,9 +312,9 @@ const Page = () => {
             Frequently Asked Questions
           </h2>
           <div className="max-w-3xl mx-auto space-y-6">
-            {faqs.map((faq, index) => (
+            {faqs.map((faq) => (
               <div
-                key={index}
+                key={faq.question}
                 className="bg-slate-900/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700"
               >
                 <h3 className="text-lg font-semibold mb-3 text-purple-400">
