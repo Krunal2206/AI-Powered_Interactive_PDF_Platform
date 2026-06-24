@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { ArrowRight, Search } from "lucide-react";
+import Image from "next/image";
 
 const HeroSection = () => {
   return (
@@ -26,23 +27,13 @@ const HeroSection = () => {
           </h1>
 
           <p className="text-white font-bold mb-8">
-            Introducing
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              {" "}
-              Chat with PDF
-            </span>
+            Introducing <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Chat with PDF</span>
           </p>
 
           <p className="text-lg md:text-xl text-gray-300 mb-12 leading-relaxed max-w-3xl mx-auto">
             Upload your document, and our chatbot will help you find the
             information you need, summerize content, and answer all your
-            questions. Ideal for everyone.{" "}
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              {" "}
-              Chat with PDF{" "}
-            </span>
-            turns static documents into{" "}
-            <span className="font-bold">dynamic conversations</span>, enhancing
+            questions. Ideal for everyone. <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Chat with PDF</span> turns static documents into <span className="font-bold">dynamic conversations</span>, enhancing
             productivity 10x fold effortlessly.
           </p>
 
@@ -73,7 +64,14 @@ const HeroSection = () => {
       </div>
 
       <div className="text-white">
-        I have to put the scrrenshot image of my website.
+        <Image
+          src={"/chat-with-pdf.png"}
+          alt="Chat with PDF Screenshot"
+          className="rounded-lg shadow-2xl w-[80%] mx-auto"
+          width={700}
+          height={700}
+          priority
+        />
       </div>
     </section>
   );
