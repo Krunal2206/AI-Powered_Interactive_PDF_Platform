@@ -61,7 +61,7 @@ function convertTimestamp(value: any): Date {
  */
 export async function storePDFChunks(
   chunks: PDFChunk[],
-  generateEmbeddings: boolean = true
+  generateEmbeddings: boolean = true,
 ): Promise<{
   success: boolean;
   chunksStored: number;
@@ -78,7 +78,7 @@ export async function storePDFChunks(
 
   try {
     console.log(
-      `Storing ${chunks.length} chunks with embeddings: ${generateEmbeddings}`
+      `Storing ${chunks.length} chunks with embeddings: ${generateEmbeddings}`,
     );
 
     // Store chunks in Firestore
@@ -104,12 +104,19 @@ export async function storePDFChunks(
     if (generateEmbeddings) {
       try {
         const embeddingResult = await storeDocumentEmbeddings(chunks);
-        embeddingsGenerated = embeddingResult.success;
+        embeddingsGenerated = embeddingResult.stored > 0;
 
-        if (embeddingsGenerated) {
-          // Update chunks to mark embeddings as generated
-          await markChunksWithEmbeddings(chunks[0].metadata.documentId);
-          console.log("Successfully generated and stored embeddings");
+        if (embeddingsGenerated && embeddingResult.storedChunkIds.length > 0) {
+          // Mark only the chunks that were actually stored successfully
+          await markChunksWithEmbeddings(embeddingResult.storedChunkIds);
+          console.log(
+            `Marked ${embeddingResult.storedChunkIds.length}/${chunks.length} chunks as embedded`,
+          );
+          if (embeddingResult.storedChunkIds.length < chunks.length) {
+            console.warn(
+              `Partial embedding: ${chunks.length - embeddingResult.storedChunkIds.length} chunks failed`,
+            );
+          }
         } else {
           console.warn("Failed to generate embeddings:", embeddingResult.error);
         }
@@ -138,23 +145,28 @@ export async function storePDFChunks(
 /**
  * Mark chunks as having embeddings generated
  */
-async function markChunksWithEmbeddings(documentId: string): Promise<void> {
-  try {
-    const q = query(
-      collection(db, CHUNKS_COLLECTION),
-      where("metadata.documentId", "==", documentId)
-    );
+async function markChunksWithEmbeddings(chunkIds: string[]): Promise<void> {
+  if (chunkIds.length === 0) return;
 
-    const querySnapshot = await getDocs(q);
+  try {
+    // Fetch only the specific chunks that were successfully embedded
+    const chunksCollection = collection(db, CHUNKS_COLLECTION);
     const batch = writeBatch(db);
 
-    querySnapshot.docs.forEach((docSnapshot) => {
-      batch.update(docSnapshot.ref, {
-        hasEmbedding: true,
-        embeddingGeneratedAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+    // Firestore `in` queries are limited to 30 items — process in batches
+    const batchSize = 30;
+    for (let i = 0; i < chunkIds.length; i += batchSize) {
+      const idBatch = chunkIds.slice(i, i + batchSize);
+      const q = query(chunksCollection, where("id", "in", idBatch));
+      const querySnapshot = await getDocs(q);
+      querySnapshot.docs.forEach((docSnapshot) => {
+        batch.update(docSnapshot.ref, {
+          hasEmbedding: true,
+          embeddingGeneratedAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+        });
       });
-    });
+    }
 
     await batch.commit();
   } catch (error) {
@@ -166,12 +178,12 @@ async function markChunksWithEmbeddings(documentId: string): Promise<void> {
  * Get all chunks for a document
  */
 export async function getDocumentChunks(
-  documentId: string
+  documentId: string,
 ): Promise<StoredPDFChunk[]> {
   try {
     const q = query(
       collection(db, CHUNKS_COLLECTION),
-      where("metadata.documentId", "==", documentId)
+      where("metadata.documentId", "==", documentId),
     );
 
     const querySnapshot: QuerySnapshot<DocumentData> = await getDocs(q);
@@ -206,7 +218,7 @@ export async function deleteDocumentChunks(documentId: string): Promise<void> {
     // Delete from Firestore
     const q = query(
       collection(db, CHUNKS_COLLECTION),
-      where("metadata.documentId", "==", documentId)
+      where("metadata.documentId", "==", documentId),
     );
 
     const querySnapshot = await getDocs(q);
@@ -218,14 +230,14 @@ export async function deleteDocumentChunks(documentId: string): Promise<void> {
 
     await batch.commit();
     console.log(
-      `Successfully deleted Firestore chunks for document ${documentId}`
+      `Successfully deleted Firestore chunks for document ${documentId}`,
     );
 
     // Delete from vector store
     try {
       await deleteDocumentFromVector(documentId);
       console.log(
-        `Successfully deleted vector embeddings for document ${documentId}`
+        `Successfully deleted vector embeddings for document ${documentId}`,
       );
     } catch (vectorError) {
       console.error("Error deleting vector embeddings:", vectorError);
@@ -250,7 +262,7 @@ export async function generateMissingEmbeddings(documentId: string): Promise<{
 
     const chunks = await getDocumentChunks(documentId);
     const chunksWithoutEmbeddings = chunks.filter(
-      (chunk) => !chunk.hasEmbedding
+      (chunk) => !chunk.hasEmbedding,
     );
 
     if (chunksWithoutEmbeddings.length === 0) {
@@ -262,7 +274,7 @@ export async function generateMissingEmbeddings(documentId: string): Promise<{
     }
 
     console.log(
-      `Generating embeddings for ${chunksWithoutEmbeddings.length} chunks`
+      `Generating embeddings for ${chunksWithoutEmbeddings.length} chunks`,
     );
 
     // Convert to PDFChunk format for embedding generation
@@ -276,9 +288,12 @@ export async function generateMissingEmbeddings(documentId: string): Promise<{
 
     const embeddingResult = await storeDocumentEmbeddings(pdfChunks);
 
-    if (embeddingResult.success) {
-      // Mark chunks as having embeddings
-      await markChunksWithEmbeddings(documentId);
+    if (
+      embeddingResult.stored > 0 &&
+      embeddingResult.storedChunkIds.length > 0
+    ) {
+      // Mark only the chunks that were actually stored successfully
+      await markChunksWithEmbeddings(embeddingResult.storedChunkIds);
 
       return {
         success: true,
@@ -305,7 +320,7 @@ export async function generateMissingEmbeddings(documentId: string): Promise<{
  * Create processing status record
  */
 export async function createProcessingStatus(
-  documentId: string
+  documentId: string,
 ): Promise<string> {
   try {
     const statusDoc = await addDoc(
@@ -314,7 +329,7 @@ export async function createProcessingStatus(
         documentId,
         status: "pending",
         startedAt: Timestamp.now(),
-      }
+      },
     );
     return statusDoc.id;
   } catch (error) {
@@ -330,7 +345,7 @@ export async function updateProcessingStatus(
   statusId: string,
   status: ProcessingStatus["status"],
   error?: string,
-  stats?: ProcessingStatus["stats"]
+  stats?: ProcessingStatus["stats"],
 ): Promise<void> {
   try {
     const statusDoc = doc(db, PROCESSING_STATUS_COLLECTION, statusId);
@@ -362,12 +377,12 @@ export async function updateProcessingStatus(
  * Get processing status for a document
  */
 export async function getProcessingStatus(
-  documentId: string
+  documentId: string,
 ): Promise<ProcessingStatus | null> {
   try {
     const q = query(
       collection(db, PROCESSING_STATUS_COLLECTION),
-      where("documentId", "==", documentId)
+      where("documentId", "==", documentId),
     );
 
     const querySnapshot = await getDocs(q);
@@ -419,7 +434,7 @@ export async function getProcessingStatus(
  * Check if document has been processed and has embeddings
  */
 export async function isDocumentProcessed(
-  documentId: string
+  documentId: string,
 ): Promise<boolean> {
   try {
     const chunks = await getDocumentChunks(documentId);
@@ -449,7 +464,7 @@ export async function getProcessingStats(documentId: string): Promise<{
     ]);
 
     const chunksWithEmbeddings = chunks.filter(
-      (chunk) => chunk.hasEmbedding
+      (chunk) => chunk.hasEmbedding,
     ).length;
 
     return {

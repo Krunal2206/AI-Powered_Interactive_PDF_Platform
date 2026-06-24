@@ -118,6 +118,7 @@ export class VectorStoreService {
   async storeChunkEmbeddings(chunks: PDFChunk[]): Promise<{
     success: boolean;
     stored: number;
+    storedChunkIds: string[];
     error?: string;
   }> {
     try {
@@ -127,6 +128,7 @@ export class VectorStoreService {
       // Process chunks in smaller batches
       const batchSize = 4;
       let storedCount = 0;
+      const storedChunkIds: string[] = [];
 
       // Process chunks in batches
       for (let i = 0; i < chunks.length; i += batchSize) {
@@ -164,6 +166,8 @@ export class VectorStoreService {
           // If test embedding succeeded, process the batch
           await vectorStore.addDocuments(documents);
           storedCount += documents.length;
+          // Track only the chunk IDs that were actually stored
+          batchChunks.forEach((chunk) => storedChunkIds.push(chunk.id));
           console.log(
             `Successfully stored batch with ${documents.length} chunks`,
           );
@@ -185,12 +189,14 @@ export class VectorStoreService {
       return {
         success: true,
         stored: storedCount,
+        storedChunkIds,
       };
     } catch (error) {
       console.error("Error storing chunk embeddings:", error);
       return {
         success: false,
         stored: 0,
+        storedChunkIds: [],
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
@@ -219,8 +225,6 @@ export class VectorStoreService {
         topK,
         { documentId: documentId },
       );
-
-
 
       const searchResults: VectorSearchResult[] = results
         .filter(([_, score]) => score >= scoreThreshold)
