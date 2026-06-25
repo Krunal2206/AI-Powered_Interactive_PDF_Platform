@@ -19,21 +19,29 @@ const HeroSection = () => {
             variant="outline"
             className="mb-8 bg-purple-500/10 text-purple-300 border-purple-500/30 px-4 py-2 whitespace-normal break-words"
           >
-            🚀 Your Interactive Document Comapanion
+            🚀 Your Interactive Document Companion
           </Badge>
 
           <h1 className="text-3xl md:text-5xl font-bold text-white mb-8 leading-tight">
-            Tranform Your PDFs into Interactive Conversations
+            Transform Your PDFs into Interactive Conversations
           </h1>
 
           <p className="text-white font-bold mb-8">
-            Introducing <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Chat with PDF</span>
+            Introducing{" "}
+            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Chat with PDF
+            </span>
           </p>
 
           <p className="text-lg md:text-xl text-gray-300 mb-12 leading-relaxed max-w-3xl mx-auto">
             Upload your document, and our chatbot will help you find the
-            information you need, summerize content, and answer all your
-            questions. Ideal for everyone. <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Chat with PDF</span> turns static documents into <span className="font-bold">dynamic conversations</span>, enhancing
+            information you need, summarize content, and answer all your
+            questions. Ideal for everyone.{" "}
+            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Chat with PDF
+            </span>{" "}
+            turns static documents into{" "}
+            <span className="font-bold">dynamic conversations</span>, enhancing
             productivity 10x fold effortlessly.
           </p>
 
