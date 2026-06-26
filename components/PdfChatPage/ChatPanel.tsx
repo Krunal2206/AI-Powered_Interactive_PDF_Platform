@@ -55,8 +55,8 @@ const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
 
   const handleReprocessDocument = async () => {
     if (!document?.id) return;
-    await invalidateHistory();
     await reprocessDocument(document.id);
+    await invalidateHistory();
   };
 
   const handleSendMessage = async () => {

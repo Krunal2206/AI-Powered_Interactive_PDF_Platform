@@ -1,5 +1,4 @@
-import { BufferMemory } from "langchain/memory";
-import { ChatMessageHistory } from "langchain/memory";
+import { BufferMemory, ChatMessageHistory } from "langchain/memory";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 
 export interface ChatMessage {
@@ -9,8 +8,8 @@ export interface ChatMessage {
 }
 
 export class DocumentChatMemory {
-  private memory: BufferMemory;
-  private documentId: string;
+  private readonly memory: BufferMemory;
+  private readonly documentId: string;
 
   constructor(documentId: string, initialMessages: ChatMessage[] = []) {
     this.documentId = documentId;
