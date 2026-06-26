@@ -107,7 +107,8 @@ export class ChatService {
       const context = relevantDocs.map((doc) => doc.pageContent).join("\n\n");
 
       // Get chat history
-      const history = await getChatHistory(this.sessionId);
+      const fullHistory = await getChatHistory(this.sessionId);
+      const history = fullHistory.slice(-20);
 
       // Generate response using Gemini
       const response = await this.generateResponse(message, context, history);

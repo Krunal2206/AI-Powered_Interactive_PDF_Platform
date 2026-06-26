@@ -79,7 +79,7 @@ export class VectorStoreService {
     }
 
     try {
-      const pineconeIndex = this.pinecone.Index(this.indexName);
+      const pineconeIndex = this.pinecone.Index(this.indexName).namespace("pdf-documents");
 
       this.vectorStore = new PineconeStore(this.embeddings, {
         pineconeIndex,
@@ -258,7 +258,7 @@ export class VectorStoreService {
   }> {
     try {
       console.log(`Deleting embeddings for document: ${documentId}`);
-      const pineconeIndex = this.pinecone.Index(this.indexName);
+      const pineconeIndex = this.pinecone.Index(this.indexName).namespace("pdf-documents");
 
       const queryResponse = await pineconeIndex.query({
         vector: new Array(3072).fill(0),
