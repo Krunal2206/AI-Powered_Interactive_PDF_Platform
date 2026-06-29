@@ -63,6 +63,7 @@ export class ChatService {
     prompt: string,
     context: string,
     history: ChatMessage[],
+    onToken: (token: string) => void,
   ): Promise<string> {
     const model = this.model.getGenerativeModel({
       model: "gemini-2.5-flash",
@@ -85,8 +86,15 @@ export class ChatService {
       context,
     ).replace("{question}", prompt);
 
-    const result = await chat.sendMessage([{ text: formattedPrompt }]);
-    return result.response.text();
+    const result = await chat.sendMessageStream([{ text: formattedPrompt }]);
+
+    let fullText = "";
+    for await (const chunk of result.stream) {
+        const token = typeof chunk.text === "function" ? chunk.text() : chunk.text;
+        fullText += token;
+        onToken(token);
+    }
+    return fullText;
   }
 
   public async chat(
@@ -111,7 +119,7 @@ export class ChatService {
       const history = fullHistory.slice(-20);
 
       // Generate response using Gemini
-      const response = await this.generateResponse(message, context, history);
+      const response = await this.generateResponse(message, context, history, onToken);
 
       // Store assistant message
       await addChatMessage(this.sessionId, response, "assistant");
