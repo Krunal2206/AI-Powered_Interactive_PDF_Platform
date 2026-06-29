@@ -3,13 +3,13 @@ import {
   doc,
   addDoc,
   updateDoc,
-  getDoc,
   getDocs,
   query,
   where,
   orderBy,
   Timestamp,
   serverTimestamp,
+  increment
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import { ChatSession, ChatMessage } from "@/types/chat";
@@ -56,7 +56,7 @@ export const addChatMessage = async (
 
     await updateDoc(sessionRef, {
       lastMessage: content,
-      messageCount: (await getDoc(sessionRef)).data()?.messageCount + 1 || 1,
+      messageCount: increment(1),
       updatedAt: serverTimestamp(),
     });
 
@@ -109,23 +109,15 @@ export const getUserSessions = async (userId: string) => {
 
 export const getDocumentSessions = async (
   documentId: string,
-  userId?: string,
+  userId: string,
 ) => {
   try {
     const sessionsRef = collection(db, "chat-sessions");
 
-    // When userId is provided (server-side calls), always filter by it
-    // to prevent one user from reading another user's chat sessions
-    const q = userId
-      ? query(
+    const q = query(
           sessionsRef,
           where("documentId", "==", documentId),
           where("userId", "==", userId),
-          orderBy("updatedAt", "desc"),
-        )
-      : query(
-          sessionsRef,
-          where("documentId", "==", documentId),
           orderBy("updatedAt", "desc"),
         );
 

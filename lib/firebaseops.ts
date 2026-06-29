@@ -18,6 +18,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  getCountFromServer,
 } from "firebase/firestore";
 
 const COLLECTION_NAME = "pdf-documents";
@@ -194,5 +195,19 @@ export async function deleteChatData(documentId: string): Promise<void> {
     await Promise.all(messageDeletes);
 
     await deleteDoc(sessionDoc.ref);
+  }
+}
+
+export async function getUserDocumentCount(userId: string): Promise<number> {
+  try {
+    const q = query(
+      collection(db, COLLECTION_NAME),
+      where("userId", "==", userId),
+    );
+    const snapshot = await getCountFromServer(q);
+    return snapshot.data().count;
+  } catch (error) {
+    console.error("Error counting user documents:", error);
+    throw new Error("Failed to count documents");
   }
 }
