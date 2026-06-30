@@ -1,5 +1,5 @@
 import cloudinary from "@/cloudinary";
-import { addDocument } from "@/lib/firebaseops";
+import { addDocument, getUserDocumentCount } from "@/lib/firebaseops";
 import { uploadLimiter, applyRateLimit } from "@/lib/rateLimit";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
@@ -12,8 +12,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Rate limit: 5 uploads per 10 minutes
-    const blocked = applyRateLimit(uploadLimiter, userId);
+    const blocked = await applyRateLimit(uploadLimiter, userId);
     if (blocked) return blocked;
+
+    const FREE_TIER_LIMIT = 3; // Max 3 files per user
+    const documentCount = await getUserDocumentCount(userId);
+    if (documentCount >= FREE_TIER_LIMIT) {
+      return NextResponse.json(
+        {
+          error: "Upload limit reached",
+          message: `Free accounts are limited to ${FREE_TIER_LIMIT} documents. Delete an existing document to upload a new one.`,
+        },
+        { status: 403 },
+      );
+    }
 
     const formData = await request.formData();
     const file = formData.get("file") as File;

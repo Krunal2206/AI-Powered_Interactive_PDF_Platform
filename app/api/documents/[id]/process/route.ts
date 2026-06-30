@@ -11,7 +11,7 @@ import {
   generateMissingEmbeddings,
   getProcessingStats,
 } from "@/lib/firebaseChunkOps";
-import { processLimiter, applyRateLimit } from "@/lib/rateLimit";
+import { applyRateLimit, processLimiter } from "@/lib/rateLimit";
 
 export async function POST(
   request: NextRequest,
@@ -39,6 +39,10 @@ export async function POST(
     if (document.userId !== userId) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
+
+    // Rate limit: 5 processing operations per 10 minutes
+    const blocked = await applyRateLimit(processLimiter, userId);
+    if (blocked) return blocked;
 
     // Check if document is already processed
     const alreadyProcessed = await isDocumentProcessed(documentId);

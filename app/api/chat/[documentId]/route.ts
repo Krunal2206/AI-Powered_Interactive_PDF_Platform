@@ -17,7 +17,7 @@ export async function POST(
     }
 
     // Apply rate limiting
-    const blocked = applyRateLimit(chatLimiter, userId);
+    const blocked = await applyRateLimit(chatLimiter, userId);
     if (blocked) return blocked;
 
     // Get document ID and message from request
@@ -64,11 +64,35 @@ export async function POST(
       sessionId || undefined,
     );
 
-    const response = await chatService.chat(message.trim(), () => {});
+    const encoder = new TextEncoder();
 
-    const currentSessionId = chatService.sessionId ?? sessionId ?? null;
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          await chatService.chat(message.trim(), (token) => {
+            const chunk = encoder.encode(token);
+            controller.enqueue(chunk);
+          });
 
-    return NextResponse.json({ response, sessionId: currentSessionId });
+          const currentSessionId = chatService.sessionId ?? sessionId ?? null;
+          const meta = `\n__SESSION__:${currentSessionId}`;
+          controller.enqueue(encoder.encode(meta));
+        } catch (error) {
+          console.error("Stream error:", error);
+          controller.error(error);
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new NextResponse(stream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "X-Content-Type-Options": "nosniff",
+        "Transfer-Encoding": "chunked",
+      },
+    });
   } catch (error) {
     console.error("Chat API error:", error);
     return NextResponse.json(
