@@ -63,17 +63,67 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
     };
   }, [documentId, userId]);
 
+  const postChatMessage = async (message: string) => {
+    return fetch(`/api/chat/${documentId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, sessionId }),
+    });
+  };
+
+  const ensureResponseOk = async (res: Response) => {
+    if (res.ok) return;
+    const data = await res.json();
+    throw new Error(data.error || "Failed to send message");
+  };
+
+  const createAssistantPlaceholder = (
+    tempId: string,
+    userMessage: ChatDisplayMessage,
+  ) => {
+    const assistantId = `assistant-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev.filter((m) => m.id !== tempId),
+      { ...userMessage, id: `user-${Date.now()}` },
+      { id: assistantId, role: "assistant", content: "", timestamp: new Date() },
+    ]);
+    return assistantId;
+  };
+
+  const updateAssistantMessage = (assistantId: string, content: string) => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === assistantId ? { ...msg, content } : msg,
+      ),
+    );
+  };
+
+  const appendStreamChunk = (chunk: string, currentContent: string) => {
+    if (!chunk.includes("__SESSION__:")) {
+      return currentContent + chunk;
+    }
+
+    const [text, meta] = chunk.split("__SESSION__:");
+    const nextContent = text ? currentContent + text : currentContent;
+    const newSessionId = meta.trim();
+
+    if (newSessionId && newSessionId !== "null" && !sessionId) {
+      setSessionId(newSessionId);
+    }
+
+    return nextContent;
+  };
+
   const sendMessage = useCallback(
     async (content: string) => {
-      if (!content.trim() || isLoading) return;
+      const trimmed = content.trim();
+      if (!trimmed || isLoading) return;
 
       const tempId = `temp-${Date.now()}`;
-
-      // Optimistically add the user message so the UI feels instant
       const userMessage: ChatDisplayMessage = {
         id: tempId,
         role: "user",
-        content: content.trim(),
+        content: trimmed,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, userMessage]);
@@ -81,44 +131,32 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
       setError(null);
 
       try {
-        const res = await fetch(`/api/chat/${documentId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: content.trim(), sessionId }),
-        });
+        const res = await postChatMessage(trimmed);
+        await ensureResponseOk(res);
 
-        const data = await res.json();
+        const assistantId = createAssistantPlaceholder(tempId, userMessage);
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let fullContent = "";
 
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to send message");
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          fullContent = appendStreamChunk(
+            decoder.decode(value, { stream: true }),
+            fullContent,
+          );
+          updateAssistantMessage(assistantId, fullContent);
         }
-
-        if (data.sessionId && !sessionId) {
-          setSessionId(data.sessionId);
-        }
-
-        const assistantMessage: ChatDisplayMessage = {
-          id: `assistant-${Date.now()}`,
-          role: "assistant",
-          content: data.response,
-          timestamp: new Date(),
-        };
-
-        // Replace temp optimistic message with confirmed one, then append assistant reply
-        setMessages((prev) => [
-          ...prev.filter((m) => m.id !== tempId),
-          { ...userMessage, id: `user-${Date.now()}` },
-          assistantMessage,
-        ]);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to send message");
-        // Roll back the optimistic message on failure
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
       } finally {
         setIsLoading(false);
       }
     },
-    [documentId, sessionId, isLoading],
+    [documentId, isLoading, sessionId],
   );
 
   const clearError = useCallback(() => setError(null), []);
