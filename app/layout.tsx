@@ -4,7 +4,6 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ToastProvider } from "@/hooks/useToast";
-import { FirebaseAuthProvider } from "@/components/FirebaseAuthProvider";
 
 export const metadata: Metadata = {
   title: "Chat with PDF — AI-Powered Interactive PDF Platform",
@@ -23,7 +22,7 @@ export default function RootLayout({
         <body className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950">
           <ToastProvider>
             <ErrorBoundary section="Application">
-              <FirebaseAuthProvider>{children}</FirebaseAuthProvider>
+              {children}
             </ErrorBoundary>
           </ToastProvider>
         </body>
