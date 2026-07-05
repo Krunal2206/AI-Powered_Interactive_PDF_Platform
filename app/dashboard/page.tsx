@@ -82,9 +82,23 @@ const Page = () => {
     }
   };
 
-  const handleDownloadDocument = (document: Document) => {
-    window.open(document.cloudinaryUrl, "_blank");
-  };
+  const handleDownloadDocument = async (document: Document) => {
+  try {
+    const response = await fetch(document.cloudinaryUrl);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+
+    const a = window.document.createElement("a");
+    a.href = url;
+    a.download = document.originalFilename || `${document.title}.pdf`;
+    window.document.body.appendChild(a);
+    a.click();
+    window.document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch {
+    toast.error("Failed to download document. Please try again.");
+  }
+};
 
   return (
     <div className="p-8 min-h-screen">

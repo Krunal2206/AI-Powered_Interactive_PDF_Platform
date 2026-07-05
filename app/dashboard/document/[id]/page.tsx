@@ -109,9 +109,25 @@ const DocumentViewPage = () => {
     }
   };
 
-  const handleDownload = () => {
-    if (document) {
-      window.open(document.cloudinaryUrl, "_blank");
+  const handleDownload = async () => {
+    try {
+      if (document) {
+        const response = await fetch(document.cloudinaryUrl);
+        if (!response.ok) throw new Error("Failed to fetch document");
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+
+        const a = window.document.createElement("a");
+        a.href = url;
+        a.download = document.originalFilename || `${document.title}.pdf`;
+        window.document.body.appendChild(a);
+        a.click();
+        window.document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      toast.error("Failed to download document. Please try again.");
     }
   };
 
