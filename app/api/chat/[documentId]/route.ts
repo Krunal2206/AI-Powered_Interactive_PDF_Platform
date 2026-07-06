@@ -33,6 +33,14 @@ export async function POST(
       );
     }
 
+    // Validate message length
+    if (message.trim().length > 2000) {
+      return NextResponse.json(
+        { error: "Message too long. Maximum 2000 characters." },
+        { status: 400 },
+      );
+    }
+
     // Validate document
     const document = await getDocument(documentId);
     if (!document) {

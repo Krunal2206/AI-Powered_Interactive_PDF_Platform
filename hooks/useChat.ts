@@ -130,11 +130,13 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
       setIsLoading(true);
       setError(null);
 
+      let assistantId: string | null = null;
+
       try {
         const res = await postChatMessage(trimmed);
         await ensureResponseOk(res);
 
-        const assistantId = createAssistantPlaceholder(tempId, userMessage);
+        assistantId = createAssistantPlaceholder(tempId, userMessage);
         const reader = res.body!.getReader();
         const decoder = new TextDecoder();
         let fullContent = "";
@@ -151,7 +153,7 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to send message");
-        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        setMessages((prev) => prev.filter((m) => m.id !== tempId && (assistantId ? m.id !== assistantId : true)));
       } finally {
         setIsLoading(false);
       }
