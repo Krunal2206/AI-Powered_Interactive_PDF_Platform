@@ -9,7 +9,7 @@ import {
   orderBy,
   Timestamp,
   serverTimestamp,
-  increment
+  increment,
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import { ChatSession, ChatMessage } from "@/types/chat";
@@ -87,26 +87,6 @@ export const getChatHistory = async (sessionId: string) => {
   }
 };
 
-export const getUserSessions = async (userId: string) => {
-  try {
-    const sessionsRef = collection(db, "chat-sessions");
-    const q = query(
-      sessionsRef,
-      where("userId", "==", userId),
-      orderBy("updatedAt", "desc"),
-    );
-
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as ChatSession[];
-  } catch (error) {
-    console.error("Error getting user sessions:", error);
-    throw error;
-  }
-};
-
 export const getDocumentSessions = async (
   documentId: string,
   userId: string,
@@ -115,11 +95,11 @@ export const getDocumentSessions = async (
     const sessionsRef = collection(db, "chat-sessions");
 
     const q = query(
-          sessionsRef,
-          where("documentId", "==", documentId),
-          where("userId", "==", userId),
-          orderBy("updatedAt", "desc"),
-        );
+      sessionsRef,
+      where("documentId", "==", documentId),
+      where("userId", "==", userId),
+      orderBy("updatedAt", "desc"),
+    );
 
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map((doc) => ({

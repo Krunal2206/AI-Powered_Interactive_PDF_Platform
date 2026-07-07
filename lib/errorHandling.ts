@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { getDocument } from "@/lib/firebaseops";
+import { Document } from "@/types/upload";
+
+// ─── Error class ──────────────────────────────────────────────────────────────
 
 export class ChatError extends Error {
   constructor(
@@ -11,8 +16,22 @@ export class ChatError extends Error {
   }
 }
 
-export const handleChatError = (error: unknown) => {
-  console.error("Chat error:", error);
+// ─── Response helpers ─────────────────────────────────────────────────────────
+
+export function apiError(
+  message: string,
+  statusCode = 500,
+  details?: string,
+): NextResponse {
+  return NextResponse.json(
+    { error: message, ...(details && { details }) },
+    { status: statusCode },
+  );
+}
+
+
+export const handleChatError = (error: unknown): NextResponse => {
+  console.error("API error:", error);
 
   if (error instanceof ChatError) {
     return NextResponse.json(
@@ -23,7 +42,7 @@ export const handleChatError = (error: unknown) => {
 
   if (error instanceof Error) {
     return NextResponse.json(
-      { error: "Internal server error", message: error.message },
+      { error: "Internal server error", details: error.message },
       { status: 500 },
     );
   }
@@ -34,21 +53,31 @@ export const handleChatError = (error: unknown) => {
   );
 };
 
-// Fixed: was checking session.user, but Clerk passes userId as a plain string
-export const throwIfUnauthorized = (userId: string | null | undefined) => {
+// ─── Document access guard ────────────────────────────────────────────────────
+// Combines auth check + document existence + ownership into one call.
+// Use this in every API route that operates on a document.
+ 
+type AuthorizeSuccess = { userId: string; document: Document; error?: never };
+type AuthorizeFailure = { error: NextResponse; userId?: never; document?: never };
+ 
+export async function authorizeDocumentAccess(
+  documentId: string,
+): Promise<AuthorizeSuccess | AuthorizeFailure> {
+  const { userId } = await auth();
+ 
   if (!userId) {
-    throw new ChatError("Unauthorized", 401, "UNAUTHORIZED");
+    return { error: apiError("Unauthorized", 401) };
   }
-};
-
-export const throwIfInvalidDocument = (documentId: string) => {
-  if (!documentId) {
-    throw new ChatError("Document ID is required", 400, "INVALID_DOCUMENT");
+ 
+  const document = await getDocument(documentId);
+ 
+  if (!document) {
+    return { error: apiError("Document not found", 404) };
   }
-};
-
-export const throwIfMissingMessage = (message: string) => {
-  if (!message?.trim()) {
-    throw new ChatError("Message content is required", 400, "MISSING_MESSAGE");
+ 
+  if (document.userId !== userId) {
+    return { error: apiError("Access denied", 403) };
   }
-};
+ 
+  return { userId, document };
+}
