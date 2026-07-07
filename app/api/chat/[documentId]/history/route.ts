@@ -1,35 +1,19 @@
 import { NextResponse } from "next/server";
 import { getDocumentSessions, getChatHistory } from "@/lib/firebaseChatOps";
-import { auth } from "@clerk/nextjs/server";
-import { throwIfUnauthorized } from "@/lib/errorHandling";
-import { getDocument, deleteChatData } from "@/lib/firebaseops";
+import { deleteChatData } from "@/lib/firebaseops";
+import { authorizeDocumentAccess, handleChatError } from "@/lib/errorHandling";
 
 export async function GET(
   request: Request,
   { params }: { params: { documentId: string } },
 ) {
   try {
-    const { userId } = await auth();
-    throwIfUnauthorized(userId);
-
     const { documentId } = await params;
+    const auth = await authorizeDocumentAccess(documentId);
+    if (auth.error) return auth.error;
+    const { userId } = auth;
 
-    // Verify the requesting user owns this document
-    const document = await getDocument(documentId);
-    if (!document) {
-      return NextResponse.json(
-        { error: "Document not found" },
-        { status: 404 },
-      );
-    }
-
-    if (document.userId !== userId) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
-    }
-
-    // Now safe to fetch sessions — we know the document belongs to this user
     const sessions = await getDocumentSessions(documentId, userId);
-
     const history =
       sessions.length > 0 ? await getChatHistory(sessions[0].id) : [];
 
@@ -38,11 +22,7 @@ export async function GET(
       sessionId: sessions.length > 0 ? sessions[0].id : null,
     });
   } catch (error) {
-    console.error("Error fetching chat history:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch chat history" },
-      { status: 500 },
-    );
+    return handleChatError(error);
   }
 }
 
@@ -51,22 +31,9 @@ export async function DELETE(
   { params }: { params: { documentId: string } },
 ) {
   try {
-    const { userId } = await auth();
-    throwIfUnauthorized(userId);
-
     const { documentId } = await params;
-
-    const document = await getDocument(documentId);
-    if (!document) {
-      return NextResponse.json(
-        { error: "Document not found" },
-        { status: 404 },
-      );
-    }
-
-    if (document.userId !== userId) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
-    }
+    const auth = await authorizeDocumentAccess(documentId);
+    if (auth.error) return auth.error;
 
     await deleteChatData(documentId);
 
@@ -75,10 +42,6 @@ export async function DELETE(
       message: "Chat history cleared",
     });
   } catch (error) {
-    console.error("Error deleting chat history:", error);
-    return NextResponse.json(
-      { error: "Failed to delete chat history" },
-      { status: 500 },
-    );
+    return handleChatError(error);
   }
 }
