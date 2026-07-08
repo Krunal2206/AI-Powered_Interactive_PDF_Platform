@@ -116,7 +116,7 @@ export const ProcessingStatus = ({
         {error && (
           <div className="bg-red-900/20 border border-red-800 rounded-lg p-3">
             <div className="flex items-start space-x-2">
-              <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+              <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm text-red-300 font-medium">
                   Processing failed
@@ -134,7 +134,7 @@ export const ProcessingStatus = ({
               <Button
                 onClick={onProcess}
                 size="sm"
-                className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white text-xs"
+                className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white text-xs cursor-pointer"
                 disabled={isProcessing}
               >
                 {isProcessing ? (
@@ -156,7 +156,7 @@ export const ProcessingStatus = ({
                 onClick={onReprocess}
                 size="sm"
                 variant="outline"
-                className="border-slate-700 hover:bg-slate-800 text-slate-300 text-xs"
+                className="border-slate-700 hover:bg-slate-800 text-slate-300 text-xs cursor-pointer"
               >
                 <RotateCcw className="w-3 h-3 mr-1" />
                 Reprocess
@@ -177,7 +177,7 @@ export const ProcessingStatus = ({
         {isProcessing && (
           <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-3">
             <div className="flex items-start space-x-2">
-              <Loader2 className="w-4 h-4 text-blue-400 mt-0.5 animate-spin flex-shrink-0" />
+              <Loader2 className="w-4 h-4 text-blue-400 mt-0.5 animate-spin shrink-0" />
               <div>
                 <p className="text-sm text-blue-300 font-medium">
                   Processing document...
