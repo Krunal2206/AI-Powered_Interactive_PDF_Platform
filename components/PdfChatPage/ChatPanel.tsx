@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { Document as DocumentType } from "@/types/upload";
 import { ChatHeader } from "./ChatHeader";
 import { ChatMessage } from "./ChatMessage";
@@ -105,13 +106,15 @@ const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
           {error && (
             <div className="bg-red-900/20 border border-red-800 rounded-lg px-4 py-3 flex items-start justify-between gap-2">
               <p className="text-red-400 text-sm">{error}</p>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={clearError}
-                className="text-red-400 hover:text-red-300 text-lg leading-none flex-shrink-0"
+                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-6 w-6 p-0 shrink-0 cursor-pointer"
                 aria-label="Dismiss error"
               >
                 ×
-              </button>
+              </Button>
             </div>
           )}
         </div>
