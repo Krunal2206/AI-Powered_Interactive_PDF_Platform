@@ -6,20 +6,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Filter } from "lucide-react";
+import { Search, ArrowUpDown } from "lucide-react";
+
+export type SortOption =
+  | "newest"
+  | "oldest"
+  | "name-asc"
+  | "name-desc"
+  | "size-desc"
+  | "most-chats";
 
 interface DocumentSearchFiltersProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  statusFilter: string;
-  setStatusFilter: (filter: string) => void;
+  sortOption: SortOption;
+  setSortOption: (option: SortOption) => void;
 }
 
 export const DocumentSearchFilters: React.FC<DocumentSearchFiltersProps> = ({
   searchTerm,
   setSearchTerm,
-  statusFilter,
-  setStatusFilter,
+  sortOption,
+  setSortOption,
 }) => {
   return (
     <div className="mb-8 flex flex-col sm:flex-row gap-4">
@@ -36,17 +44,18 @@ export const DocumentSearchFilters: React.FC<DocumentSearchFiltersProps> = ({
         />
       </div>
 
-      <Select value={statusFilter} onValueChange={setStatusFilter}>
-        <SelectTrigger className="w-full sm:w-48 bg-slate-800/50 border-slate-700 text-slate-300">
-          <Filter size={16} className="mr-2" />
-          <SelectValue placeholder="Filter by status" />
+      <Select value={sortOption} onValueChange={setSortOption}>
+        <SelectTrigger className="w-full sm:w-52 bg-slate-800/50 border-slate-700 text-slate-300">
+          <ArrowUpDown size={16} className="mr-2 shrink-0" />
+          <SelectValue placeholder="Sort by" />
         </SelectTrigger>
-        <SelectContent className="bg-slate-800/50 border-slate-700 text-slate-300">
-          <SelectItem value="all">All Documents</SelectItem>
-          <SelectItem value="ready">Ready</SelectItem>
-          <SelectItem value="processing">Processing</SelectItem>
-          <SelectItem value="uploading">Uploading</SelectItem>
-          <SelectItem value="error">Error</SelectItem>
+        <SelectContent className="bg-slate-800 border-slate-700 text-slate-300">
+          <SelectItem value="newest">Newest First</SelectItem>
+          <SelectItem value="oldest">Oldest First</SelectItem>
+          <SelectItem value="name-asc">Name A → Z</SelectItem>
+          <SelectItem value="name-desc">Name Z → A</SelectItem>
+          <SelectItem value="size-desc">Largest First</SelectItem>
+          <SelectItem value="most-chats">Most Chats</SelectItem>
         </SelectContent>
       </Select>
     </div>
