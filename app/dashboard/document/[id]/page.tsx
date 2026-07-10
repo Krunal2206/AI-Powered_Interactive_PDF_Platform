@@ -168,7 +168,7 @@ const DocumentViewPage = () => {
         <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg border border-slate-700/50 p-4 lg:p-6 mb-6">
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-4">
             <div className="flex items-center space-x-3 lg:space-x-4 mb-4 lg:mb-0">
-              <div className="p-2 lg:p-3 rounded-lg bg-slate-700/30 flex-shrink-0">
+              <div className="p-2 lg:p-3 rounded-lg bg-slate-700/30 shrink-0">
                 <FileText size={24} className="text-purple-400 lg:w-8 lg:h-8" />
               </div>
               <div className="min-w-0 flex-1">
@@ -184,7 +184,7 @@ const DocumentViewPage = () => {
             <div
               className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
                 document.status
-              )} flex-shrink-0 self-start`}
+              )} shrink-0 self-start`}
             >
               {document.status}
             </div>
@@ -368,7 +368,7 @@ const DocumentViewPage = () => {
                     size="sm"
                     onClick={() => setPageNumber(pageNumber - 1)}
                     disabled={pageNumber <= 1}
-                    className="border-white/20 hover:bg-white/10 hover:text-white"
+                    className="border-white/20 hover:bg-white/10 hover:text-white cursor-pointer"
                   >
                     Previous
                   </Button>
@@ -382,7 +382,7 @@ const DocumentViewPage = () => {
                     size="sm"
                     onClick={() => setPageNumber(pageNumber + 1)}
                     disabled={pageNumber >= numPages}
-                    className="border-white/20 hover:bg-white/10 hover:text-white"
+                    className="border-white/20 hover:bg-white/10 hover:text-white cursor-pointer"
                   >
                     Next
                   </Button>

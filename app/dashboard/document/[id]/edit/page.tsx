@@ -14,6 +14,7 @@ import { LoadingSpinner } from "@/components/DashboardPage/LoadingSpinner";
 import { ErrorMessage } from "@/components/DashboardPage/ErrorMessage";
 import { useDocumentNavigation } from "@/lib/navigationUtils";
 import { useToast } from "@/hooks/useToast";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const DocumentEditPage = () => {
   const params = useParams();
@@ -25,8 +26,9 @@ const DocumentEditPage = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
-  const {goToDocument, goToDashboard} = useDocumentNavigation();
+  const { goToDocument, goToDashboard } = useDocumentNavigation();
   const toast = useToast();
+  const { confirm, ConfirmDialogComponent } = useConfirm();
 
   const documentId = params.id as string;
 
@@ -108,15 +110,16 @@ const DocumentEditPage = () => {
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (hasChanges) {
-      if (
-        window.confirm(
-          "You have unsaved changes. Are you sure you want to leave?"
-        )
-      ) {
-        goToDocument(documentId);
-      }
+      const confirmed = await confirm({
+        title: "Discard Changes",
+        message: "You have unsaved changes. Are you sure you want to leave?",
+        confirmLabel: "Discard",
+        cancelLabel: "Keep Editing",
+        destructive: true,
+      });
+      if (confirmed) goToDocument(documentId);
     } else {
       goToDocument(documentId);
     }
@@ -138,6 +141,7 @@ const DocumentEditPage = () => {
 
   return (
     <div className="p-8 min-h-screen">
+      {ConfirmDialogComponent}
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
