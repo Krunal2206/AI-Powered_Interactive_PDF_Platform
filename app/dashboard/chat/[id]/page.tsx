@@ -171,12 +171,14 @@ const Page = () => {
                 <div className="w-full bg-slate-900 rounded-t-xl max-h-[85vh] flex flex-col">
                   <div className="flex justify-between items-center p-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
                     <h3 className="text-white font-semibold">Chat with PDF</h3>
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={toggleChat}
-                      className="text-slate-400 hover:text-white text-xl font-bold w-8 h-8 flex items-center justify-center"
+                      className="text-slate-400 hover:text-white hover:bg-slate-700/50 h-8 w-8 p-0 cursor-pointer"
                     >
                       ×
-                    </button>
+                    </Button>
                   </div>
                   <div className="flex-1 overflow-y-auto">
                     <ChatPanel document={document} isVisible={true} />

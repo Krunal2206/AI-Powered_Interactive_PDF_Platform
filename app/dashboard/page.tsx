@@ -7,21 +7,23 @@ import { deleteDocument, getUserDocuments } from "@/lib/firebaseops";
 import { Button } from "@/components/ui/button";
 import DocumentCard from "@/components/DashboardPage/DocumentCard";
 import { DocumentGridSkeleton } from "@/components/DashboardPage/DocumentCardSkeleton";
-import { DocumentSearchFilters } from "@/components/DashboardPage/DocumentSearchFilters";
+import { DocumentSearchFilters, SortOption } from "@/components/DashboardPage/DocumentSearchFilters";
 import { AddDocumentCard } from "@/components/DashboardPage/AddDocumentCard";
 import { useDocumentNavigation } from "@/lib/navigationUtils";
 import { useToast } from "@/hooks/useToast";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const Page = () => {
   const { user } = useUser();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortOption, setSortOption] = useState<SortOption>("newest");
   const [loading, setLoading] = useState(true);
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([]);
   const { goToUpload, goToDocument, goToDocumentEdit } =
     useDocumentNavigation();
   const toast = useToast();
+  const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => {
     if (user?.id) {
@@ -31,7 +33,7 @@ const Page = () => {
 
   useEffect(() => {
     filterDocuments();
-  }, [documents, searchTerm, statusFilter]);
+  }, [documents, searchTerm, sortOption]);
 
   const fetchDocuments = async () => {
     if (!user?.id) return;
@@ -61,17 +63,42 @@ const Page = () => {
       );
     }
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((doc) => doc.status === statusFilter);
-    }
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortOption) {
+        case "newest":
+          return (
+            new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+          );
+        case "oldest":
+          return (
+            new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime()
+          );
+        case "name-asc":
+          return a.title.localeCompare(b.title);
+        case "name-desc":
+          return b.title.localeCompare(a.title);
+        case "size-desc":
+          return b.fileSize - a.fileSize;
+        case "most-chats":
+          return (b.totalChats ?? 0) - (a.totalChats ?? 0);
+        default:
+          return 0;
+      }
+    });
 
-    setFilteredDocuments(filtered);
+    setFilteredDocuments(sorted);
   };
 
   const handleDeleteDocument = async (documentId: string) => {
-    if (!window.confirm("Are you sure you want to delete this document?")) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: "Delete Document",
+      message:
+        "This will permanently delete the document and all its chat history. This action cannot be undone.",
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     try {
       await deleteDocument(documentId);
@@ -83,45 +110,44 @@ const Page = () => {
   };
 
   const handleDownloadDocument = async (document: Document) => {
-  try {
-    const response = await fetch(document.cloudinaryUrl);
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
+    try {
+      const response = await fetch(document.cloudinaryUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
 
-    const a = window.document.createElement("a");
-    a.href = url;
-    a.download = document.originalFilename || `${document.title}.pdf`;
-    window.document.body.appendChild(a);
-    a.click();
-    window.document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch {
-    toast.error("Failed to download document. Please try again.");
-  }
-};
+      const a = window.document.createElement("a");
+      a.href = url;
+      a.download = document.originalFilename || `${document.title}.pdf`;
+      window.document.body.appendChild(a);
+      a.click();
+      window.document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to download document. Please try again.");
+    }
+  };
 
   return (
     <div className="p-8 min-h-screen">
+      {ConfirmDialogComponent}
       <div className="mb-8">
         <h1 className="text-4xl font-light text-gray-300 mb-2">My Documents</h1>
         <p className="text-slate-400">
-          {loading ? (
-            "Loading documents..."
-          ) : (
-            (() => {
-              const count = documents.length;
-              const pluralSuffix = count === 1 ? "" : "s";
-              return `${count} document${pluralSuffix} stored`;
-            })()
-          )}
+          {loading
+            ? "Loading documents..."
+            : (() => {
+                const count = documents.length;
+                const pluralSuffix = count === 1 ? "" : "s";
+                return `${count} document${pluralSuffix} stored`;
+              })()}
         </p>
       </div>
 
       <DocumentSearchFilters
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
+        sortOption={sortOption}
+        setSortOption={setSortOption}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -150,7 +176,7 @@ const Page = () => {
                 <Button
                   onClick={() => {
                     setSearchTerm("");
-                    setStatusFilter("all");
+                    setSortOption("newest");
                   }}
                   variant="outline"
                   className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 text-slate-300 border-slate-700/50 cursor-pointer hover:bg-gradient-to-br hover:from-purple-600/10 hover:to-purple-900/10 hover:border-purple-500/50 hover:text-slate-300 transition-all duration-300"
