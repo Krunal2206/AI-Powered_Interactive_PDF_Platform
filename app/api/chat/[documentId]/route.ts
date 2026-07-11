@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { getDocument } from "@/lib/firebaseops";
 import { ChatService } from "@/lib/chatService";
 import { isDocumentProcessed } from "@/lib/firebaseChunkOps";
 import { chatLimiter, applyRateLimit } from "@/lib/rateLimit";
+import { authorizeDocumentAccess, handleChatError } from "@/lib/errorHandling";
 
 export async function POST(
   request: NextRequest,
@@ -42,16 +42,8 @@ export async function POST(
     }
 
     // Validate document
-    const document = await getDocument(documentId);
-    if (!document) {
-      return NextResponse.json(
-        { error: "Document not found" },
-        { status: 404 },
-      );
-    }
-    if (document.userId !== userId) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
-    }
+    const docAuth = await authorizeDocumentAccess(documentId);
+    if (docAuth.error) return docAuth.error;
 
     // Validate document processing status
     const processed = await isDocumentProcessed(documentId);
@@ -102,13 +94,6 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error("Chat API error:", error);
-    return NextResponse.json(
-      {
-        error: "Failed to process message",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    );
+    return handleChatError(error);
   }
 }

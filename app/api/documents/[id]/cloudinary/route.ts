@@ -14,7 +14,7 @@ export async function DELETE(
 
     const result = await cloudinary.uploader.destroy(
       document.cloudinaryPublicId,
-      { resource_type: "raw" },
+      { resource_type: "image" },
     );
 
     if (result.result !== "ok" && result.result !== "not found") {
