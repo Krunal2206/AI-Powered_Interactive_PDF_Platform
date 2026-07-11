@@ -18,9 +18,9 @@ const plans = [
     description: "Perfect for getting started with PDF chat",
     icon: Zap,
     features: [
-      "3 PDF uploads per month",
+      "10 PDF uploads per month",
       "Basic chat functionality",
-      "5 MB file size limit",
+      "10 MB file size limit",
       "24-hour chat history",
       "Mobile & desktop access",
     ],

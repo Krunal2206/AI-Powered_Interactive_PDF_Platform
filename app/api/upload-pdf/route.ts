@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const blocked = await applyRateLimit(uploadLimiter, userId);
     if (blocked) return blocked;
 
-    const FREE_TIER_LIMIT = 3; // Max 3 files per user
+    const FREE_TIER_LIMIT = 10; // Max 10 files per user
     const documentCount = await getUserDocumentCount(userId);
     if (documentCount >= FREE_TIER_LIMIT) {
       return NextResponse.json(
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       cloudinaryResult = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
-            resource_type: "raw",
+            resource_type: "image",
             folder: process.env.CLOUDINARY_UPLOAD_FOLDER,
             public_id: `pdf_${Date.now()}`,
             use_filename: true,
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
             } else {
               resolve(uploadResult);
             }
-          }
+          },
         );
         uploadStream.end(buffer);
       });
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       
       try {
         await cloudinary.uploader.destroy(cloudinaryResult.public_id, {
-          resource_type: "raw",
+          resource_type: "image",
         });
       } catch (error) {
         console.error("Error cleaning up Cloudinary upload:", error);
