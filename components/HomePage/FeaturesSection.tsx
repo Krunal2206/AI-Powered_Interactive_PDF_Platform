@@ -24,7 +24,7 @@ const features = [
   {
     name: "Interactive PDF Viewer",
     description:
-      "Engage with your PDFs like never before using out intuitive and interactive viewer.",
+      "Engage with your PDFs like never before using our intuitive and interactive viewer.",
     icon: EyeIcon,
   },
   {
