@@ -45,8 +45,6 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
   const thumbnailUrl =
     document.thumbnailUrl || getThumbnailUrl(document.cloudinaryUrl);
 
-  console.log(thumbnailUrl);
-
   return (
     <div className="group relative aspect-3/4 bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 cursor-pointer hover:shadow-lg hover:shadow-purple-500/10 hover:scale-105 overflow-hidden">
       {/* PDF thumbnail — fills top 60% of card */}
