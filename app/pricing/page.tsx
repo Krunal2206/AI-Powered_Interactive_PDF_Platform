@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -7,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Building2, Check, Crown, Users, X, Zap } from "lucide-react";
+import { Building2, Check, Crown, Users, X, Zap, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
 const plans = [
@@ -126,6 +129,8 @@ const faqs = [
 ];
 
 const Page = () => {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 text-white">
       {/* Header */}
@@ -181,7 +186,7 @@ const Page = () => {
                     key={`${plan.name}-${feature}`}
                     className="flex items-center space-x-3"
                   >
-                    <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
+                    <Check className="w-5 h-5 text-green-400 shrink-0" />
                     <span className="text-sm">{feature}</span>
                   </div>
                 ))}
@@ -190,7 +195,7 @@ const Page = () => {
                     key={`${plan.name}-${limitation}`}
                     className="flex items-center space-x-3"
                   >
-                    <X className="w-5 h-5 text-red-400 flex-shrink-0" />
+                    <X className="w-5 h-5 text-red-400 shrink-0" />
                     <span className="text-sm text-slate-400">{limitation}</span>
                   </div>
                 ))}
@@ -311,18 +316,39 @@ const Page = () => {
           <h2 className="text-3xl font-bold text-center mb-12">
             Frequently Asked Questions
           </h2>
-          <div className="max-w-3xl mx-auto space-y-6">
-            {faqs.map((faq) => (
-              <div
-                key={faq.question}
-                className="bg-slate-900/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700"
-              >
-                <h3 className="text-lg font-semibold mb-3 text-purple-400">
-                  {faq.question}
-                </h3>
-                <p className="text-slate-300">{faq.answer}</p>
-              </div>
-            ))}
+          <div className="max-w-3xl mx-auto space-y-4">
+            {faqs.map((faq, index) => {
+              const isOpen = openIndex === index;
+              return (
+                <div
+                  key={faq.question}
+                  className="bg-slate-900/50 backdrop-blur-sm rounded-xl border border-slate-700 overflow-hidden transition-all duration-300"
+                >
+                  <button
+                    onClick={() => setOpenIndex(isOpen ? null : index)}
+                    className="w-full flex items-center justify-between p-6 text-left font-semibold text-lg text-purple-300 hover:bg-slate-800/30 transition-colors focus:outline-none cursor-pointer"
+                  >
+                    <span className={isOpen ? "text-purple-400" : "text-slate-100"}>
+                      {faq.question}
+                    </span>
+                    <ChevronDown
+                      className={`w-5 h-5 text-slate-400 transition-transform duration-300 shrink-0 ${
+                        isOpen ? "transform rotate-180 text-purple-400" : ""
+                      }`}
+                    />
+                  </button>
+                  <div
+                    className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                      isOpen ? "max-h-[300px] opacity-100 border-t border-slate-800/50" : "max-h-0 opacity-0 pointer-events-none"
+                    }`}
+                  >
+                    <div className="p-6 text-slate-300 text-sm leading-relaxed bg-slate-900/20">
+                      {faq.answer}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
