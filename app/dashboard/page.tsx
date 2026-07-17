@@ -7,11 +7,15 @@ import { deleteDocument, getUserDocuments } from "@/lib/firebaseops";
 import { Button } from "@/components/ui/button";
 import DocumentCard from "@/components/DashboardPage/DocumentCard";
 import { DocumentGridSkeleton } from "@/components/DashboardPage/DocumentCardSkeleton";
-import { DocumentSearchFilters, SortOption } from "@/components/DashboardPage/DocumentSearchFilters";
+import {
+  DocumentSearchFilters,
+  SortOption,
+} from "@/components/DashboardPage/DocumentSearchFilters";
 import { AddDocumentCard } from "@/components/DashboardPage/AddDocumentCard";
 import { useDocumentNavigation } from "@/lib/navigationUtils";
 import { useToast } from "@/hooks/useToast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const Page = () => {
   const { user } = useUser();
@@ -19,11 +23,27 @@ const Page = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("newest");
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([]);
   const { goToUpload, goToDocument, goToDocumentEdit } =
     useDocumentNavigation();
   const toast = useToast();
   const { confirm, ConfirmDialogComponent } = useConfirm();
+
+  const ITEMS_PER_PAGE = 10;
+
+  const totalPages =
+    filteredDocuments.length <= ITEMS_PER_PAGE - 1
+      ? 1
+      : 1 +
+        Math.ceil(
+          (filteredDocuments.length - (ITEMS_PER_PAGE - 1)) / ITEMS_PER_PAGE,
+        );
+
+  const startIndex =
+    currentPage === 1 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE - 1;
+  const endIndex = currentPage * ITEMS_PER_PAGE - 1;
+  const paginatedDocuments = filteredDocuments.slice(startIndex, endIndex);
 
   useEffect(() => {
     if (user?.id) {
@@ -32,6 +52,7 @@ const Page = () => {
   }, [user?.id]);
 
   useEffect(() => {
+    setCurrentPage(1);
     filterDocuments();
   }, [documents, searchTerm, sortOption]);
 
@@ -155,9 +176,9 @@ const Page = () => {
           <DocumentGridSkeleton count={10} />
         ) : (
           <>
-            <AddDocumentCard onClick={goToUpload} />
+            {currentPage === 1 && <AddDocumentCard onClick={goToUpload} />}
 
-            {filteredDocuments.map((document) => (
+            {paginatedDocuments.map((document) => (
               <DocumentCard
                 key={document.id}
                 document={document}
@@ -188,6 +209,42 @@ const Page = () => {
           </>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {!loading && totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 mt-12 py-4">
+          <Button
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            variant="ghost"
+            className="cursor-pointer text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Previous
+          </Button>
+          <span className="text-slate-400 text-sm">
+            Page{" "}
+            <strong className="text-slate-200 font-semibold">
+              {currentPage}
+            </strong>{" "}
+            of{" "}
+            <strong className="text-slate-200 font-semibold">
+              {totalPages}
+            </strong>
+          </span>
+          <Button
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+            }
+            disabled={currentPage === totalPages}
+            variant="ghost"
+            className="cursor-pointer text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+          >
+            Next
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
