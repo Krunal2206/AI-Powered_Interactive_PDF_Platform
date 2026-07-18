@@ -37,7 +37,7 @@ export async function addDocument(
       ...documentData,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
-      uploadAt: Timestamp.now(),
+      uploadedAt: Timestamp.now(),
     });
     return docRef.id;
   } catch (error) {
