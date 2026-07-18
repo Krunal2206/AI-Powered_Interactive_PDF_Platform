@@ -1,6 +1,7 @@
 "use client";
 
-import { Bot } from "lucide-react";
+import { useState } from "react";
+import { Bot, Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatDisplayMessage } from "@/hooks/useChat";
@@ -81,29 +82,55 @@ const MarkdownStrong = ({ children, ...props }: any) => (
 
 export const ChatMessage = ({ message }: { message: ChatDisplayMessage }) => {
   const isUser = message.role === "user";
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy text: ", err);
+    }
+  };
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[280px] sm:max-w-[320px] rounded-2xl px-4 py-3 ${
+        className={`relative group max-w-[85%] rounded-2xl px-4 py-3 ${
           isUser
             ? "bg-gradient-to-br from-purple-500 to-blue-500 text-white"
             : "bg-slate-800 text-slate-100"
         }`}
       >
+        {/* Copy button for AI messages */}
+        {!isUser && message.content !== "" && (
+          <button
+            onClick={handleCopy}
+            className="absolute top-2 right-2 p-1.5 rounded-md bg-slate-900/60 hover:bg-slate-900 text-slate-400 hover:text-slate-100 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer border border-slate-700/50 flex items-center justify-center"
+            title="Copy response"
+          >
+            {copied ? (
+              <Check className="w-3.5 h-3.5 text-green-400 animate-scale-in" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
+          </button>
+        )}
+
         <div className="flex items-start space-x-2">
           {!isUser && (
-            <Bot className="w-4 h-4 mt-1 text-purple-400 flex-shrink-0" />
+            <Bot className="w-4 h-4 mt-1 text-purple-400 shrink-0" />
           )}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 pr-4">
             {isUser ? (
               // User messages are plain text — no need to parse markdown
-              <p className="text-sm leading-relaxed break-words">
+              <p className="text-sm leading-relaxed wrap-break-word">
                 {message.content}
               </p>
             ) : (
               // AI responses are formatted as Markdown
-              <div className="text-sm leading-relaxed prose prose-invert prose-sm max-w-none break-words">
+              <div className="text-sm leading-relaxed prose prose-invert prose-sm max-w-none wrap-break-word">
                 {!isUser && message.content === "" ? (
                   <span className="flex space-x-1 mt-1">
                     <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:0ms]" />
