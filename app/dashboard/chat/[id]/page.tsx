@@ -50,6 +50,39 @@ const Page = () => {
     }
   }, [documentId, user?.id]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsFullscreen((isFullscreen) => {
+          if (isFullscreen) {
+            return false;
+          }
+          return isFullscreen;
+        });
+      }
+
+      const activeElement = window.document.activeElement;
+      const isInputFocused =
+        activeElement &&
+        (activeElement.tagName === "INPUT" ||
+          activeElement.tagName === "TEXTAREA" ||
+          activeElement.hasAttribute("contenteditable"));
+
+      if (e.key === "/" && !isInputFocused) {
+        e.preventDefault();
+        const chatInput = window.document.getElementById("chat-input");
+        if (chatInput) {
+          (chatInput as HTMLInputElement).focus();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   const fetchDocument = async () => {
     try {
       setLoading(true);
