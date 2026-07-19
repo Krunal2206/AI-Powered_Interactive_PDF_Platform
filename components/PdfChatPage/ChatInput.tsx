@@ -19,7 +19,7 @@ export const ChatInput = ({
   isLoading,
   disabled = false,
 }: ChatInputProps) => {
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey && !disabled) {
       e.preventDefault();
       onSendMessage();
@@ -33,6 +33,7 @@ export const ChatInput = ({
       <div className="flex items-center space-x-2">
         <div className="flex-1 relative">
           <Input
+            id="chat-input"
             placeholder={
               disabled
                 ? "Process the document first to start chatting..."
@@ -40,7 +41,7 @@ export const ChatInput = ({
             }
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             className={`bg-slate-800 border-slate-700 focus:border-purple-500 pr-12 text-white ${
               disabled ? "opacity-60 cursor-not-allowed" : ""
             }`}
