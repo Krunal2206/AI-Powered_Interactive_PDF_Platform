@@ -19,9 +19,10 @@ interface PDFDocumentProps {
   searchTerm: string;
   onLoadSuccess: (data: { numPages: number }) => void;
   onDownload: () => void;
+  onSearchMatches?: (count: number) => void;
 }
 
-function highlightTextLayer(container: HTMLElement, term: string) {
+function highlightTextLayer(container: HTMLElement, term: string): number {
   const existing = container.querySelectorAll("mark[data-pdf-highlight]");
   existing.forEach((mark) => {
     const parent = mark.parentNode;
@@ -30,15 +31,16 @@ function highlightTextLayer(container: HTMLElement, term: string) {
     parent.normalize();
   });
 
-  if (!term.trim()) return;
+  if (!term.trim()) return 0;
 
   const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
   const regex = new RegExp(`(${escapedTerm})`, "gi");
 
   const textLayer = container.querySelector(".textLayer");
-  if (!textLayer) return;
+  if (!textLayer) return 0;
 
   const spans = textLayer.querySelectorAll("span");
+  let totalMatches = 0;
 
   spans.forEach((span) => {
     if (span.children.length > 0) return;
@@ -68,6 +70,7 @@ function highlightTextLayer(container: HTMLElement, term: string) {
       fragment.appendChild(mark);
 
       lastIndex = regex.lastIndex;
+      totalMatches++;
     }
 
     if (lastIndex < text.length) {
@@ -77,6 +80,15 @@ function highlightTextLayer(container: HTMLElement, term: string) {
     span.textContent = "";
     span.appendChild(fragment);
   });
+
+  if (totalMatches > 0) {
+    const firstMark = textLayer.querySelector("mark[data-pdf-highlight]");
+    if (firstMark) {
+      firstMark.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
+  return totalMatches;
 }
 
 export const PDFDocument = ({
@@ -86,14 +98,16 @@ export const PDFDocument = ({
   searchTerm,
   onLoadSuccess,
   onDownload,
+  onSearchMatches,
 }: PDFDocumentProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [pageRendered, setPageRendered] = useState(false);
 
   const applyHighlights = useCallback(() => {
     if (!containerRef.current) return;
-    highlightTextLayer(containerRef.current, searchTerm);
-  }, [searchTerm]);
+    const count = highlightTextLayer(containerRef.current, searchTerm);
+    onSearchMatches?.(count);
+  }, [searchTerm, onSearchMatches]);
 
   useEffect(() => {
     if (!pageRendered) return;
@@ -108,10 +122,11 @@ export const PDFDocument = ({
     requestAnimationFrame(() => {
       setPageRendered(true);
       if (containerRef.current) {
-        highlightTextLayer(containerRef.current, searchTerm);
+        const count = highlightTextLayer(containerRef.current, searchTerm);
+        onSearchMatches?.(count);
       }
     });
-  }, [searchTerm]);
+  }, [searchTerm, onSearchMatches]);
 
   return (
     <div className="flex-1 overflow-auto bg-slate-900/30">
