@@ -27,6 +27,7 @@ const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
   const {
     messages,
     isLoading,
+    isLoadingHistory,
     error,
     sendMessage,
     clearError,
@@ -72,7 +73,7 @@ const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
   if (!isVisible) return null;
 
   return (
-    <div className="w-full lg:w-96 flex flex-col bg-slate-900/30 backdrop-blur-sm">
+    <div className="w-full lg:w-[480px] flex flex-col bg-slate-900/30 backdrop-blur-sm">
       <ChatHeader />
 
       <ProcessingStatus
@@ -84,7 +85,16 @@ const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
 
       <ScrollArea className="flex-1 p-4 h-32">
         <div className="space-y-4">
-          {messages.length === 0 && !isLoading && (
+          {isLoadingHistory && messages.length === 0 && (
+            <div className="text-center text-slate-400 py-8">
+              <div className="max-w-64 mx-auto space-y-3">
+                <div className="h-4 w-3/4 mx-auto bg-slate-700/50 rounded animate-pulse" />
+                <div className="h-4 w-1/2 mx-auto bg-slate-700/50 rounded animate-pulse" />
+                <div className="h-4 w-2/3 mx-auto bg-slate-700/50 rounded animate-pulse" />
+              </div>
+            </div>
+          )}
+          {!isLoadingHistory && messages.length === 0 && !isLoading && (
             <div className="text-center text-slate-400 py-8">
               <div className="max-w-64 mx-auto">
                 <h3 className="text-sm font-medium mb-2">Ready to chat!</h3>
