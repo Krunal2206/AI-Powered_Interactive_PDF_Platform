@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PDFToolbar } from "./PDFToolbar";
 import { PDFDocument } from "./PDFDocument";
 import { Document as DocumentType } from "@/types/upload";
@@ -16,7 +16,14 @@ export const PDFViewer = ({ document, isFullscreen }: PDFViewerProps) => {
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [matchCount, setMatchCount] = useState<number>(0);
   const toast = useToast();
+
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setMatchCount(0);
+    }
+  }, [searchTerm]);
 
   const goToPrevPage = () => {
     setPageNumber((prev) => Math.max(1, prev - 1));
@@ -77,6 +84,7 @@ export const PDFViewer = ({ document, isFullscreen }: PDFViewerProps) => {
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onDownload={handleDownload}
+        matchCount={matchCount}
       />
 
       <PDFDocument
@@ -86,6 +94,7 @@ export const PDFViewer = ({ document, isFullscreen }: PDFViewerProps) => {
         searchTerm={searchTerm}
         onLoadSuccess={onDocumentLoadSuccess}
         onDownload={handleDownload}
+        onSearchMatches={setMatchCount}
       />
     </div>
   );
