@@ -15,6 +15,7 @@ interface PDFToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onDownload: () => void;
+  matchCount?: number;
 }
 
 export const PDFToolbar = ({
@@ -28,6 +29,7 @@ export const PDFToolbar = ({
   onZoomIn,
   onZoomOut,
   onDownload,
+  matchCount = 0,
 }: PDFToolbarProps) => {
   return (
     <div className="bg-slate-900/50 backdrop-blur-sm border-b border-slate-800 p-2 sm:p-4">
@@ -87,8 +89,13 @@ export const PDFToolbar = ({
               placeholder="Search in document..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-40 sm:w-64 bg-slate-800 border-slate-700 focus:border-purple-500 text-white text-sm"
+              className="pl-10 pr-24 w-40 sm:w-64 bg-slate-800 border-slate-700 focus:border-purple-500 text-white text-sm"
             />
+            {searchTerm.trim() && (
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-medium text-slate-400 bg-slate-950/60 px-1.5 py-0.5 rounded border border-slate-700/50 select-none">
+                {matchCount} {matchCount === 1 ? "match" : "matches"}
+              </span>
+            )}
           </div>
           <Button
             variant="outline"
