@@ -10,6 +10,7 @@ export interface ChatDisplayMessage {
 interface UseChatReturn {
   messages: ChatDisplayMessage[];
   isLoading: boolean;
+  isLoadingHistory: boolean;
   error: string | null;
   sendMessage: (content: string) => Promise<void>;
   clearError: () => void;
@@ -20,6 +21,7 @@ interface UseChatReturn {
 export function useChat(documentId: string, userId: string): UseChatReturn {
   const [messages, setMessages] = useState<ChatDisplayMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
@@ -28,11 +30,21 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
     let mounted = true;
 
     const loadHistory = async () => {
-      if (!documentId || !userId) return;
+      if (!documentId || !userId) {
+        setIsLoadingHistory(false);
+        return;
+      }
 
+      setIsLoadingHistory(true);
       try {
         const res = await fetch(`/api/chat/${documentId}/history`);
-        if (!res.ok || !mounted) return;
+        if (!mounted) return;
+
+        if (!res.ok) {
+          console.error("Failed to load chat history:", res.status);
+          setIsLoadingHistory(false);
+          return;
+        }
 
         const data = await res.json();
 
@@ -54,6 +66,10 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
         }
       } catch (err) {
         console.error("Error loading chat history:", err);
+      } finally {
+        if (mounted) {
+          setIsLoadingHistory(false);
+        }
       }
     };
 
@@ -183,5 +199,5 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
     setSessionId(null);
   }, [documentId]);
 
-  return { messages, isLoading, error, sendMessage, clearError, clearMessages, invalidateHistory };
+  return { messages, isLoading, isLoadingHistory, error, sendMessage, clearError, clearMessages, invalidateHistory };
 }
