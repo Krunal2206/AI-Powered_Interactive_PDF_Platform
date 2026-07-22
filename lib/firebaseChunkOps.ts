@@ -81,50 +81,12 @@ export async function storePDFChunks(
       `Storing ${chunks.length} chunks with embeddings: ${generateEmbeddings}`,
     );
 
-    // Store chunks in Firestore
-    const batch = writeBatch(db);
-    const chunksCollection = collection(db, CHUNKS_COLLECTION);
-
-    for (const chunk of chunks) {
-      const chunkDoc = doc(chunksCollection);
-      batch.set(chunkDoc, {
-        ...chunk,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-        hasEmbedding: false,
-        embeddingGeneratedAt: null,
-      });
-    }
-
-    await batch.commit();
+    await saveChunks(chunks);
     console.log(`Successfully stored ${chunks.length} chunks in Firestore`);
 
-    // Generate and store embeddings if requested
-    let embeddingsGenerated = false;
-    if (generateEmbeddings) {
-      try {
-        const embeddingResult = await storeDocumentEmbeddings(chunks);
-        embeddingsGenerated = embeddingResult.stored > 0;
-
-        if (embeddingsGenerated && embeddingResult.storedChunkIds.length > 0) {
-          // Mark only the chunks that were actually stored successfully
-          await markChunksWithEmbeddings(embeddingResult.storedChunkIds);
-          console.log(
-            `Marked ${embeddingResult.storedChunkIds.length}/${chunks.length} chunks as embedded`,
-          );
-          if (embeddingResult.storedChunkIds.length < chunks.length) {
-            console.warn(
-              `Partial embedding: ${chunks.length - embeddingResult.storedChunkIds.length} chunks failed`,
-            );
-          }
-        } else {
-          console.warn("Failed to generate embeddings:", embeddingResult.error);
-        }
-      } catch (embeddingError) {
-        console.error("Error generating embeddings:", embeddingError);
-        // Don't fail the entire operation if embedding generation fails
-      }
-    }
+    const embeddingsGenerated = generateEmbeddings
+      ? await generateAndMarkEmbeddings(chunks)
+      : false;
 
     return {
       success: true,
@@ -142,6 +104,58 @@ export async function storePDFChunks(
   }
 }
 
+async function saveChunks(chunks: PDFChunk[]): Promise<void> {
+  const BATCH_LIMIT = 499;
+  const chunksCollection = collection(db, CHUNKS_COLLECTION);
+
+  for (let i = 0; i < chunks.length; i += BATCH_LIMIT) {
+    const batch = writeBatch(db);
+    const slice = chunks.slice(i, i + BATCH_LIMIT);
+
+    for (const chunk of slice) {
+      const chunkDoc = doc(chunksCollection);
+      batch.set(chunkDoc, {
+        ...chunk,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        hasEmbedding: false,
+        embeddingGeneratedAt: null,
+      });
+    }
+
+    await batch.commit();
+  }
+}
+
+async function generateAndMarkEmbeddings(chunks: PDFChunk[]): Promise<boolean> {
+  try {
+    const embeddingResult = await storeDocumentEmbeddings(chunks);
+    const embeddingsGenerated = embeddingResult.stored > 0;
+
+    if (!embeddingsGenerated) {
+      console.warn("Failed to generate embeddings:", embeddingResult.error);
+      return false;
+    }
+
+    if (embeddingResult.storedChunkIds.length > 0) {
+      await markChunksWithEmbeddings(embeddingResult.storedChunkIds);
+      console.log(
+        `Marked ${embeddingResult.storedChunkIds.length}/${chunks.length} chunks as embedded`,
+      );
+      if (embeddingResult.storedChunkIds.length < chunks.length) {
+        console.warn(
+          `Partial embedding: ${chunks.length - embeddingResult.storedChunkIds.length} chunks failed`,
+        );
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error generating embeddings:", error);
+    return false;
+  }
+}
+
 /**
  * Mark chunks as having embeddings generated
  */
@@ -151,24 +165,38 @@ async function markChunksWithEmbeddings(chunkIds: string[]): Promise<void> {
   try {
     // Fetch only the specific chunks that were successfully embedded
     const chunksCollection = collection(db, CHUNKS_COLLECTION);
-    const batch = writeBatch(db);
 
-    // Firestore `in` queries are limited to 30 items — process in batches
-    const batchSize = 30;
-    for (let i = 0; i < chunkIds.length; i += batchSize) {
-      const idBatch = chunkIds.slice(i, i + batchSize);
+    // Firestore `in` queries are limited to 30 items — process in batches.
+    // We also need to respect the 500-operation batch write limit, so we
+    // commit a new batch every 499 updates.
+    const QUERY_BATCH_SIZE = 30;
+    const WRITE_BATCH_LIMIT = 499;
+    let currentBatch = writeBatch(db);
+    let opsInBatch = 0;
+
+    for (let i = 0; i < chunkIds.length; i += QUERY_BATCH_SIZE) {
+      const idBatch = chunkIds.slice(i, i + QUERY_BATCH_SIZE);
       const q = query(chunksCollection, where("id", "in", idBatch));
       const querySnapshot = await getDocs(q);
-      querySnapshot.docs.forEach((docSnapshot) => {
-        batch.update(docSnapshot.ref, {
+
+      for (const docSnapshot of querySnapshot.docs) {
+        if (opsInBatch >= WRITE_BATCH_LIMIT) {
+          await currentBatch.commit();
+          currentBatch = writeBatch(db);
+          opsInBatch = 0;
+        }
+        currentBatch.update(docSnapshot.ref, {
           hasEmbedding: true,
           embeddingGeneratedAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
         });
-      });
+        opsInBatch++;
+      }
     }
 
-    await batch.commit();
+    if (opsInBatch > 0) {
+      await currentBatch.commit();
+    }
   } catch (error) {
     console.error("Error marking chunks with embeddings:", error);
   }
@@ -215,20 +243,24 @@ export async function deleteDocumentChunks(documentId: string): Promise<void> {
   try {
     console.log(`Deleting chunks and embeddings for document ${documentId}`);
 
-    // Delete from Firestore
+    // Delete from Firestore (split into sub-batches of 499)
+    const BATCH_LIMIT = 499;
     const q = query(
       collection(db, CHUNKS_COLLECTION),
       where("metadata.documentId", "==", documentId),
     );
 
     const querySnapshot = await getDocs(q);
-    const batch = writeBatch(db);
+    const docs = querySnapshot.docs;
 
-    querySnapshot.docs.forEach((docSnapshot) => {
-      batch.delete(docSnapshot.ref);
-    });
-
-    await batch.commit();
+    for (let i = 0; i < docs.length; i += BATCH_LIMIT) {
+      const batch = writeBatch(db);
+      const slice = docs.slice(i, i + BATCH_LIMIT);
+      slice.forEach((docSnapshot) => {
+        batch.delete(docSnapshot.ref);
+      });
+      await batch.commit();
+    }
     console.log(
       `Successfully deleted Firestore chunks for document ${documentId}`,
     );
@@ -438,9 +470,14 @@ export async function isDocumentProcessed(
 ): Promise<boolean> {
   try {
     const chunks = await getDocumentChunks(documentId);
+    if (chunks.length === 0) return false;
 
-    // Document is considered processed if it has chunks with embeddings
-    return chunks.length > 0 && chunks.every((chunk) => chunk.hasEmbedding);
+    // Document is considered processed if at least 50% of its chunks have
+    // embeddings.  Requiring every() is too strict — a single failed
+    // embedding would block the user from chatting entirely.
+    const withEmbeddings = chunks.filter((chunk) => chunk.hasEmbedding).length;
+    const ratio = withEmbeddings / chunks.length;
+    return ratio >= 0.5;
   } catch (error) {
     console.error("Error checking if document is processed:", error);
     return false;
