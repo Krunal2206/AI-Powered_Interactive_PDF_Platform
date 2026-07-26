@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Building2, Check, Crown, Users, X, Zap, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import Footer from "@/components/Footer";
 
 const plans = [
   {
@@ -132,6 +133,7 @@ const Page = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
+    <>
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 text-white">
       {/* Header */}
       <div className="container mx-auto px-4 py-16">
@@ -373,6 +375,8 @@ const Page = () => {
         </div>
       </div>
     </div>
+    <Footer />
+    </>
   );
 };
 
