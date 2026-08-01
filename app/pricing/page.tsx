@@ -249,14 +249,14 @@ const Page = () => {
                 {[
                   {
                     feature: "PDF Uploads",
-                    free: "3/month",
+                    free: "10/month",
                     pro: "Unlimited",
                     team: "Unlimited",
                     enterprise: "Unlimited",
                   },
                   {
                     feature: "File Size Limit",
-                    free: "5 MB",
+                    free: "10 MB",
                     pro: "100 MB",
                     team: "100 MB",
                     enterprise: "No limit",
