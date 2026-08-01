@@ -14,8 +14,8 @@ const footerSections = [
   {
     title: "Company",
     links: [
-      { label: "About Us", href: "/" },
-      { label: "Contact", href: "/" },
+      { label: "About Us", href: "/about" },
+      { label: "Contact", href: "/contact" },
       { label: "Blog", href: "/" },
       { label: "Careers", href: "/" },
     ],
@@ -23,8 +23,8 @@ const footerSections = [
   {
     title: "Legal",
     links: [
-      { label: "Privacy Policy", href: "/" },
-      { label: "Terms of Service", href: "/" },
+      { label: "Privacy Policy", href: "/privacy-policy" },
+      { label: "Terms of Service", href: "/terms" },
       { label: "Cookie Policy", href: "/" },
     ],
   },
