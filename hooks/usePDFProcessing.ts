@@ -1,6 +1,4 @@
-// hooks/usePDFProcessing.ts
 import { useState, useCallback } from "react";
-import { Document } from "@/types/upload";
 
 interface ProcessingStats {
   totalPages: number;
