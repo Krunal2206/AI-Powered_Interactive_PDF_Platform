@@ -23,6 +23,13 @@ const NavigationItems = () => (
     </Link>
 
     <Link
+      href="/dashboard/profile"
+      className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
+    >
+      Profile
+    </Link>
+
+    <Link
       href="/dashboard/upload"
       className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 font-bold flex items-center space-x-1 justify-center"
     >
