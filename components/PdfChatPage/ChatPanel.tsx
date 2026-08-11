@@ -13,6 +13,7 @@ import { ProcessingStatus } from "./ProcessingStatus";
 import { useChat } from "@/hooks/useChat";
 import { useUser } from "@clerk/nextjs";
 import { InlineErrorBoundary } from "@/components/ErrorBoundary";
+import { ExportChatButton } from "./ExportChatButton";
 
 interface ChatPanelProps {
   document: DocumentType;
@@ -74,7 +75,14 @@ const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
 
   return (
     <div className="w-full lg:w-[480px] flex flex-col bg-slate-900/30 backdrop-blur-sm">
-      <ChatHeader />
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <ChatHeader />
+        </div>
+        <div className="pr-3">
+          <ExportChatButton messages={messages} documentTitle={document.title} />
+        </div>
+      </div>
 
       <ProcessingStatus
         document={document}
