@@ -43,11 +43,12 @@ function buildCorsHeaders(req: NextRequest) {
 function buildCspHeader(nonce: string) {
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://js.stripe.com https://*.clerk.accounts.dev https://*.clerk.dev`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com",
+    "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://*.stripe.com",
     "font-src 'self' data:",
-    "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.generativelanguage.googleapis.com https://*.cloudinary.com https://*.clerk.accounts.dev https://*.clerk.dev",
+    "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.generativelanguage.googleapis.com https://*.cloudinary.com https://*.clerk.accounts.dev https://*.clerk.dev https://api.stripe.com",
+    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.clerk.accounts.dev",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
