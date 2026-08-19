@@ -29,6 +29,7 @@ export const plans = [
     href: "/dashboard",
     popular: false,
     clerkPlan: null, // free plan — just navigate
+    slug: "free_user",
   },
   {
     name: "Pro",
@@ -52,6 +53,7 @@ export const plans = [
     href: null,
     popular: true,
     clerkPlan: CLERK_PLAN_IDS.Pro,
+    slug: "pro",
   },
   {
     name: "Team",
@@ -75,6 +77,7 @@ export const plans = [
     href: null,
     popular: false,
     clerkPlan: CLERK_PLAN_IDS.Team,
+    slug: "team",
   },
   {
     name: "Enterprise",
@@ -98,6 +101,7 @@ export const plans = [
     href: "mailto:sales@chatwithpdf.com",
     popular: false,
     clerkPlan: null,
+    slug: "enterprise",
   },
 ];
 
