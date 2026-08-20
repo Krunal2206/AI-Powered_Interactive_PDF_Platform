@@ -227,7 +227,7 @@ export class VectorStoreService {
       );
 
       const searchResults: VectorSearchResult[] = results
-        .filter(([_, score]) => score >= scoreThreshold)
+        .filter(([, score]) => score >= scoreThreshold)
         .map(([document, score]) => ({
           chunkId: document.metadata.chunkId,
           content: document.pageContent,

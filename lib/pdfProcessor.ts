@@ -32,7 +32,7 @@ export interface PDFExtractionOptions {
 }
 
 export class PDFProcessor {
-  private textSplitter: RecursiveCharacterTextSplitter;
+  private readonly textSplitter: RecursiveCharacterTextSplitter;
 
   constructor(options: PDFExtractionOptions = {}) {
     this.textSplitter = new RecursiveCharacterTextSplitter({
@@ -148,13 +148,11 @@ export class PDFProcessor {
     documentId: string,
     fileName: string
   ): Promise<PDFProcessingResult> {
-    const startTime = Date.now();
-
     try {
       console.log(`Fetching PDF from URL: ${pdfUrl}`);
 
       // Validate URL
-      if (!pdfUrl || !pdfUrl.startsWith("http")) {
+      if (!pdfUrl?.startsWith("http")) {
         throw new Error("Invalid PDF URL provided");
       }
 
