@@ -50,9 +50,18 @@ export interface StoredPDFChunk extends PDFChunk {
   embeddingGeneratedAt?: Date;
 }
 
-function convertTimestamp(value: any): Date {
+function isTimestampLike(value: unknown): value is { toDate: () => Date } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "toDate" in value &&
+    typeof value.toDate === "function"
+  );
+}
+
+function convertTimestamp(value: unknown): Date {
   if (value instanceof Date) return value;
-  if (value?.toDate) return value.toDate();
+  if (isTimestampLike(value)) return value.toDate();
   return new Date();
 }
 
@@ -381,7 +390,13 @@ export async function updateProcessingStatus(
 ): Promise<void> {
   try {
     const statusDoc = doc(db, PROCESSING_STATUS_COLLECTION, statusId);
-    const updateData: any = {
+    const updateData: {
+      status: ProcessingStatus["status"];
+      updatedAt: Timestamp;
+      completedAt?: Timestamp;
+      error?: string;
+      stats?: NonNullable<ProcessingStatus["stats"]>;
+    } = {
       status,
       updatedAt: Timestamp.now(),
     };
