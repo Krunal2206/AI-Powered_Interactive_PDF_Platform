@@ -18,6 +18,20 @@ interface UseChatReturn {
   invalidateHistory: () => Promise<void>;
 }
 
+interface SerializedTimestamp {
+  seconds?: number;
+}
+
+interface ChatHistoryResponse {
+  history?: Array<{
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+    createdAt?: SerializedTimestamp | string;
+  }>;
+  sessionId?: string | null;
+}
+
 export function useChat(documentId: string, userId: string): UseChatReturn {
   const [messages, setMessages] = useState<ChatDisplayMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,18 +60,27 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
           return;
         }
 
-        const data = await res.json();
+        const data: ChatHistoryResponse = await res.json();
 
         // Firestore Timestamps are serialized to { seconds, nanoseconds } over JSON
         const history: ChatDisplayMessage[] = (data.history || []).map(
-          (msg: any) => ({
-            id: msg.id,
-            role: msg.role as "user" | "assistant",
-            content: msg.content,
-            timestamp: msg.createdAt?.seconds
-              ? new Date(msg.createdAt.seconds * 1000)
-              : new Date(msg.createdAt || Date.now()),
-          }),
+          (msg) => {
+            const createdAt = msg.createdAt;
+            const timestampValue =
+              typeof createdAt === "string" ? createdAt : Date.now();
+            const timestamp =
+              typeof createdAt === "object" &&
+              typeof createdAt.seconds === "number"
+                ? new Date(createdAt.seconds * 1000)
+                : new Date(timestampValue);
+
+            return {
+              id: msg.id,
+              role: msg.role,
+              content: msg.content,
+              timestamp,
+            };
+          },
         );
 
         if (mounted) {
@@ -79,13 +102,13 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
     };
   }, [documentId, userId]);
 
-  const postChatMessage = async (message: string) => {
+  const postChatMessage = useCallback(async (message: string) => {
     return fetch(`/api/chat/${documentId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message, sessionId }),
     });
-  };
+  }, [documentId, sessionId]);
 
   const ensureResponseOk = async (res: Response) => {
     if (res.ok) return;
@@ -114,7 +137,7 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
     );
   };
 
-  const appendStreamChunk = (chunk: string, currentContent: string) => {
+  const appendStreamChunk = useCallback((chunk: string, currentContent: string) => {
     if (!chunk.includes("__SESSION__:")) {
       return currentContent + chunk;
     }
@@ -128,7 +151,7 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
     }
 
     return nextContent;
-  };
+  }, [sessionId]);
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -174,7 +197,7 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
         setIsLoading(false);
       }
     },
-    [documentId, isLoading, sessionId],
+    [appendStreamChunk, isLoading, postChatMessage],
   );
 
   const clearError = useCallback(() => setError(null), []);
