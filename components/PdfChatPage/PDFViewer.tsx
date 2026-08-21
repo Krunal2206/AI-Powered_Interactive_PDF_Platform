@@ -58,7 +58,7 @@ export const PDFViewer = ({ document, isFullscreen }: PDFViewerProps) => {
         window.document.body.removeChild(a);
         URL.revokeObjectURL(url);
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to download document. Please try again.");
     }
   };

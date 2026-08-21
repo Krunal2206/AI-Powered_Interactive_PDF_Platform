@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Document as DocumentType } from "@/types/upload";
 import {
   CheckCircle,
   Clock,
@@ -25,14 +24,12 @@ interface ProcessingState {
 }
 
 interface ProcessingStatusProps {
-  document: DocumentType;
   processingState: ProcessingState;
   onProcess: () => void;
   onReprocess: () => void;
 }
 
 export const ProcessingStatus = ({
-  document,
   processingState,
   onProcess,
   onReprocess,
