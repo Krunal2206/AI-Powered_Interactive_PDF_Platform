@@ -122,7 +122,6 @@ export class VectorStoreService {
     error?: string;
   }> {
     try {
-      console.log(`Starting to store embeddings for ${chunks.length} chunks`);
       const vectorStore = await this.initializeVectorStore();
 
       // Process chunks in smaller batches
@@ -133,11 +132,6 @@ export class VectorStoreService {
       // Process chunks in batches
       for (let i = 0; i < chunks.length; i += batchSize) {
         const batchChunks = chunks.slice(i, i + batchSize);
-        console.log(
-          `Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(
-            chunks.length / batchSize,
-          )}`,
-        );
 
         // Prepare documents with cleaned text
         const documents = batchChunks.map((chunk) => ({
@@ -168,9 +162,6 @@ export class VectorStoreService {
           storedCount += documents.length;
           // Track only the chunk IDs that were actually stored
           batchChunks.forEach((chunk) => storedChunkIds.push(chunk.id));
-          console.log(
-            `Successfully stored batch with ${documents.length} chunks`,
-          );
 
           // Add a small delay between batches
           if (i + batchSize < chunks.length) {
@@ -185,7 +176,6 @@ export class VectorStoreService {
         }
       }
 
-      console.log(`Successfully stored ${storedCount} embeddings`);
       return {
         success: true,
         stored: storedCount,
@@ -240,10 +230,6 @@ export class VectorStoreService {
           },
         }));
 
-      console.log(
-        `Found ${searchResults.length} relevant chunks for query: "${query}"`,
-      );
-
       return searchResults;
     } catch (error) {
       console.error("Error searching similar chunks:", error);
@@ -257,7 +243,6 @@ export class VectorStoreService {
     error?: string;
   }> {
     try {
-      console.log(`Deleting embeddings for document: ${documentId}`);
       const pineconeIndex = this.pinecone.Index(this.indexName).namespace("pdf-documents");
 
       const queryResponse = await pineconeIndex.query({
@@ -278,10 +263,6 @@ export class VectorStoreService {
 
       const vectors = queryResponse.matches.map((match) => match.id);
       await pineconeIndex.deleteMany({ ids: vectors });
-
-      console.log(
-        `Deleted ${vectors.length} vectors for document: ${documentId}`,
-      );
 
       return {
         success: true,

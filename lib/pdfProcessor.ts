@@ -62,10 +62,6 @@ export class PDFProcessor {
     const startTime = Date.now();
 
     try {
-      console.log(
-        `Starting PDF processing for ${fileName}, buffer size: ${pdfBuffer.length} bytes`
-      );
-
       // Validate buffer
       if (!pdfBuffer || pdfBuffer.length === 0) {
         throw new Error("Invalid PDF buffer: empty or null");
@@ -80,10 +76,6 @@ export class PDFProcessor {
       // Parse PDF using pdf-parse
       const pdfData = await pdfParse(pdfBuffer);
 
-      console.log(
-        `PDF parsed successfully: ${pdfData.numpages} pages, ${pdfData.text.length} characters`
-      );
-
       const fullText = pdfData.text;
       const totalPages = pdfData.numpages;
 
@@ -96,8 +88,6 @@ export class PDFProcessor {
       // Split text into chunks
       const textChunks = await this.textSplitter.splitText(fullText);
 
-      console.log(`Text split into ${textChunks.length} chunks`);
-
       // Create PDFChunk objects with metadata
       const chunks: PDFChunk[] = this.createChunksWithMetadata(
         textChunks,
@@ -108,8 +98,6 @@ export class PDFProcessor {
       );
 
       const processingTime = Date.now() - startTime;
-
-      console.log(`PDF processing completed in ${processingTime}ms`);
 
       return {
         chunks,
@@ -149,8 +137,6 @@ export class PDFProcessor {
     fileName: string
   ): Promise<PDFProcessingResult> {
     try {
-      console.log(`Fetching PDF from URL: ${pdfUrl}`);
-
       // Validate URL
       if (!pdfUrl?.startsWith("http")) {
         throw new Error("Invalid PDF URL provided");
@@ -171,10 +157,6 @@ export class PDFProcessor {
 
       clearTimeout(timeoutId);
 
-      console.log(`HTTP Response: ${response.status} ${response.statusText}`);
-      console.log(`Content-Type: ${response.headers.get("content-type")}`);
-      console.log(`Content-Length: ${response.headers.get("content-length")}`);
-
       if (!response.ok) {
         throw new Error(
           `Failed to fetch PDF: ${response.status} ${response.statusText}`
@@ -193,7 +175,6 @@ export class PDFProcessor {
 
       // Get the PDF data
       const arrayBuffer = await response.arrayBuffer();
-      console.log(`Downloaded PDF: ${arrayBuffer.byteLength} bytes`);
 
       if (arrayBuffer.byteLength === 0) {
         throw new Error("Downloaded PDF is empty");
@@ -300,18 +281,10 @@ export class PDFProcessor {
     };
   }> {
     try {
-      console.log(
-        `Processing document ${documentId}: ${fileName} from ${cloudinaryUrl}`
-      );
-
       const result = await this.extractTextFromUrl(
         cloudinaryUrl,
         documentId,
         fileName
-      );
-
-      console.log(
-        `Successfully processed document ${documentId}: ${result.chunks.length} chunks created`
       );
 
       return {
