@@ -86,12 +86,7 @@ export async function storePDFChunks(
   }
 
   try {
-    console.log(
-      `Storing ${chunks.length} chunks with embeddings: ${generateEmbeddings}`,
-    );
-
     await saveChunks(chunks);
-    console.log(`Successfully stored ${chunks.length} chunks in Firestore`);
 
     const embeddingsGenerated = generateEmbeddings
       ? await generateAndMarkEmbeddings(chunks)
@@ -148,9 +143,6 @@ async function generateAndMarkEmbeddings(chunks: PDFChunk[]): Promise<boolean> {
 
     if (embeddingResult.storedChunkIds.length > 0) {
       await markChunksWithEmbeddings(embeddingResult.storedChunkIds);
-      console.log(
-        `Marked ${embeddingResult.storedChunkIds.length}/${chunks.length} chunks as embedded`,
-      );
       if (embeddingResult.storedChunkIds.length < chunks.length) {
         console.warn(
           `Partial embedding: ${chunks.length - embeddingResult.storedChunkIds.length} chunks failed`,
@@ -250,8 +242,6 @@ export async function getDocumentChunks(
  */
 export async function deleteDocumentChunks(documentId: string): Promise<void> {
   try {
-    console.log(`Deleting chunks and embeddings for document ${documentId}`);
-
     // Delete from Firestore (split into sub-batches of 499)
     const BATCH_LIMIT = 499;
     const q = query(
@@ -270,16 +260,10 @@ export async function deleteDocumentChunks(documentId: string): Promise<void> {
       });
       await batch.commit();
     }
-    console.log(
-      `Successfully deleted Firestore chunks for document ${documentId}`,
-    );
 
     // Delete from vector store
     try {
       await deleteDocumentFromVector(documentId);
-      console.log(
-        `Successfully deleted vector embeddings for document ${documentId}`,
-      );
     } catch (vectorError) {
       console.error("Error deleting vector embeddings:", vectorError);
       // Don't fail the operation if vector deletion fails
@@ -299,24 +283,17 @@ export async function generateMissingEmbeddings(documentId: string): Promise<{
   error?: string;
 }> {
   try {
-    console.log(`Checking for missing embeddings for document ${documentId}`);
-
     const chunks = await getDocumentChunks(documentId);
     const chunksWithoutEmbeddings = chunks.filter(
       (chunk) => !chunk.hasEmbedding,
     );
 
     if (chunksWithoutEmbeddings.length === 0) {
-      console.log("All chunks already have embeddings");
       return {
         success: true,
         generated: 0,
       };
     }
-
-    console.log(
-      `Generating embeddings for ${chunksWithoutEmbeddings.length} chunks`,
-    );
 
     // Convert to PDFChunk format for embedding generation
     const pdfChunks: PDFChunk[] = chunksWithoutEmbeddings.map((chunk) => ({

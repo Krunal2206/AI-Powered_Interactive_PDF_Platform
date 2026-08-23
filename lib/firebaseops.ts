@@ -174,8 +174,6 @@ export async function deleteDocument(documentId: string): Promise<void> {
 
     const docRef = doc(db, COLLECTION_NAME, documentId);
     await deleteDoc(docRef);
-
-    console.log(`Document ${documentId} fully deleted`);
   } catch (error) {
     console.error("Error deleting document:", error);
     throw new Error("Failed to delete document");
