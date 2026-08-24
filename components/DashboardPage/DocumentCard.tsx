@@ -19,6 +19,7 @@ import { Button } from "../ui/button";
 import { Document } from "@/types/upload";
 import { formatDistanceToNow } from "date-fns";
 import { formatFileSize, getStatusTextColor } from "@/lib/documentUtils";
+import Image from "next/image";
 
 interface DocumentCardProps {
   document: Document;
@@ -50,9 +51,11 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
       {/* PDF thumbnail — fills top 60% of card */}
       <div className="absolute inset-0 bottom-[40%]">
         {!thumbnailError ? (
-          <img
+          <Image
             src={thumbnailUrl}
             alt={`Preview of ${document.title}`}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 25vw, 20vw"
             className="w-full h-full object-cover object-top"
             onError={() => setThumbnailError(true)}
           />

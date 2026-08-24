@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import type { DropzoneState } from "react-dropzone";
 import { Card, CardContent } from "@/components/ui/card";
 import { UploadIcon } from "lucide-react";
 
@@ -7,8 +8,8 @@ interface DropZoneProps {
   isDragActive: boolean;
   isDragAccept: boolean;
   isDragReject: boolean;
-  getRootProps: () => any;
-  getInputProps: () => any;
+  getRootProps: DropzoneState["getRootProps"];
+  getInputProps: DropzoneState["getInputProps"];
 }
 
 export const DropZone: React.FC<DropZoneProps> = ({
