@@ -1,12 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import {
+  useState,
+  type ComponentPropsWithoutRef,
+  type ElementType,
+  type JSX,
+} from "react";
 import { Bot, Copy, Check } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type ExtraProps } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatDisplayMessage } from "@/hooks/useChat";
 
-const CodeBlock = ({ inline, className, children, ...props }: any) => {
+type MarkdownElementProps<Tag extends keyof JSX.IntrinsicElements> =
+  ComponentPropsWithoutRef<Extract<Tag, ElementType>> & ExtraProps;
+
+type CodeBlockProps = MarkdownElementProps<"code"> & {
+  inline?: boolean;
+};
+
+const CodeBlock = ({ inline, children, ...props }: CodeBlockProps) => {
   return inline ? (
     <code
       className="bg-slate-700 rounded px-1 py-0.5 text-xs font-mono"
@@ -24,7 +36,11 @@ const CodeBlock = ({ inline, className, children, ...props }: any) => {
   );
 };
 
-const MarkdownLink = ({ children, href, ...props }: any) => {
+const MarkdownLink = ({
+  children,
+  href,
+  ...props
+}: MarkdownElementProps<"a">) => {
   return (
     <a
       href={href}
@@ -38,43 +54,49 @@ const MarkdownLink = ({ children, href, ...props }: any) => {
   );
 };
 
-const MarkdownUl = ({ children, ...props }: any) => (
+const MarkdownUl = ({ children, ...props }: MarkdownElementProps<"ul">) => (
   <ul className="list-disc list-inside space-y-1 mt-1" {...props}>
     {children}
   </ul>
 );
 
-const MarkdownOl = ({ children, ...props }: any) => (
+const MarkdownOl = ({ children, ...props }: MarkdownElementProps<"ol">) => (
   <ol className="list-decimal list-inside space-y-1 mt-1" {...props}>
     {children}
   </ol>
 );
 
-const MarkdownParagraph = ({ children, ...props }: any) => (
+const MarkdownParagraph = ({
+  children,
+  ...props
+}: MarkdownElementProps<"p">) => (
   <p className="mb-1 last:mb-0" {...props}>
     {children}
   </p>
 );
 
-const MarkdownH1 = ({ children, ...props }: any) => (
+const MarkdownH1 = ({ children, ...props }: MarkdownElementProps<"h1">) => (
   <h1 className="text-base font-bold mt-2 mb-1" {...props}>
     {children}
   </h1>
 );
 
-const MarkdownH2 = ({ children, ...props }: any) => (
+const MarkdownH2 = ({ children, ...props }: MarkdownElementProps<"h2">) => (
   <h2 className="text-sm font-bold mt-2 mb-1" {...props}>
     {children}
   </h2>
 );
 
-const MarkdownH3 = ({ children, ...props }: any) => (
+const MarkdownH3 = ({ children, ...props }: MarkdownElementProps<"h3">) => (
   <h3 className="text-sm font-semibold mt-1 mb-0.5" {...props}>
     {children}
   </h3>
 );
 
-const MarkdownStrong = ({ children, ...props }: any) => (
+const MarkdownStrong = ({
+  children,
+  ...props
+}: MarkdownElementProps<"strong">) => (
   <strong className="font-semibold" {...props}>
     {children}
   </strong>

@@ -85,7 +85,6 @@ const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
       </div>
 
       <ProcessingStatus
-        document={document}
         processingState={processingState}
         onProcess={handleProcessDocument}
         onReprocess={handleReprocessDocument}
