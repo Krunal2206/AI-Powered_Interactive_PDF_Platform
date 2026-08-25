@@ -118,7 +118,7 @@ export default function TermsPage() {
             <TermsSection title="7. Service Limitations">
               <p>The free tier of Chat with PDF is subject to:</p>
               <ul>
-                <li>A maximum of 10 PDF uploads</li>
+                <li>A maximum of 10 PDF uploads per month</li>
                 <li>A file size limit of 10 MB per document</li>
                 <li>Rate limiting on API requests</li>
               </ul>
@@ -170,9 +170,8 @@ export default function TermsPage() {
                   href="/contact"
                   className="text-purple-400 hover:text-purple-300 underline underline-offset-2"
                 >
-                  contact page
+                  contact page.
                 </a>
-                .
               </p>
             </TermsSection>
           </div>
@@ -185,10 +184,10 @@ export default function TermsPage() {
 function TermsSection({
   title,
   children,
-}: {
+}: Readonly<{
   title: string;
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <div className="space-y-3">
       <h2 className="text-xl font-semibold text-white">{title}</h2>
