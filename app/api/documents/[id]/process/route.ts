@@ -13,9 +13,13 @@ import {
 import { applyRateLimit, processLimiter } from "@/lib/rateLimit";
 import { authorizeDocumentAccess, handleChatError } from "@/lib/errorHandling";
 
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+  
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: RouteParams,
 ) {
   try {
     const { id: documentId } = await params;
@@ -118,7 +122,7 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: RouteParams,
 ) {
   try {
     const { id: documentId } = await params;
@@ -144,7 +148,7 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: RouteParams,
 ) {
   try {
     const { id: documentId } = await params;
@@ -165,7 +169,7 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: RouteParams,
 ) {
   try {
     const { id: documentId } = await params;

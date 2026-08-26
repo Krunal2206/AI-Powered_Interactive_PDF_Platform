@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import cloudinary from "@/cloudinary";
 import { authorizeDocumentAccess, handleChatError } from "@/lib/errorHandling";
 
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: RouteParams,
 ) {
   try {
     const { id: documentId } = await params;
