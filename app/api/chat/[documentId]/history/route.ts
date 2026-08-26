@@ -3,9 +3,13 @@ import { getDocumentSessions, getChatHistory } from "@/lib/firebaseChatOps";
 import { deleteChatData } from "@/lib/firebaseops";
 import { authorizeDocumentAccess, handleChatError } from "@/lib/errorHandling";
 
+type RouteParams = {
+  params: Promise<{ documentId: string }>;
+}
+
 export async function GET(
   request: Request,
-  { params }: { params: { documentId: string } },
+  { params }: RouteParams,
 ) {
   try {
     const { documentId } = await params;
@@ -28,7 +32,7 @@ export async function GET(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { documentId: string } },
+  { params }: RouteParams,
 ) {
   try {
     const { documentId } = await params;

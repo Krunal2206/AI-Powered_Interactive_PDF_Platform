@@ -5,9 +5,13 @@ import { isDocumentProcessed } from "@/lib/firebaseChunkOps";
 import { chatLimiter, applyRateLimit } from "@/lib/rateLimit";
 import { authorizeDocumentAccess, handleChatError } from "@/lib/errorHandling";
 
+type RouteParams = {
+  params: Promise<{ documentId: string }>;
+}
+
 export async function POST(
   request: NextRequest,
-  { params }: { params: { documentId: string } },
+  { params }: RouteParams,
 ) {
   try {
     // Get authenticated user
