@@ -12,7 +12,7 @@ import {
   Minimize2,
 } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Document as DocumentType } from "@/types/upload";
 import { PDFViewer } from "@/components/PdfChatPage/PDFViewer";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -32,23 +32,39 @@ const Page = () => {
   const { isMobile } = useResponsive();
   const [showChat, setShowChat] = useState<boolean | null>(null);
 
-  useEffect(() => {
-    if (showChat === null) {
-      setShowChat(!isMobile);
+  const fetchDocument = useCallback(async () => {
+    try {
+      setLoading(true);
+      const doc = await getDocument(documentId);
+
+      if (!doc) {
+        setError("Document not found");
+        return;
+      }
+
+      if (doc.userId !== user?.id) {
+        setError("Access denied");
+        return;
+      }
+
+      setDocument(doc);
+    } catch (err) {
+      console.error("Error fetching document:", err);
+      setError("Failed to load document");
+    } finally {
+      setLoading(false);
     }
-  }, [isMobile, showChat]);
+  }, [documentId, user?.id]);
 
   useEffect(() => {
-    if (showChat !== null) {
-      setShowChat(!isMobile);
-    }
+    setShowChat(!isMobile);
   }, [isMobile]);
 
   useEffect(() => {
     if (documentId && user?.id) {
-      fetchDocument();
+      void fetchDocument();
     }
-  }, [documentId, user?.id]);
+  }, [documentId, fetchDocument, user?.id]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -82,30 +98,6 @@ const Page = () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
-
-  const fetchDocument = async () => {
-    try {
-      setLoading(true);
-      const doc = await getDocument(documentId);
-
-      if (!doc) {
-        setError("Document not found");
-        return;
-      }
-
-      if (doc.userId !== user?.id) {
-        setError("Access denied");
-        return;
-      }
-
-      setDocument(doc);
-    } catch (err) {
-      console.error("Error fetching document:", err);
-      setError("Failed to load document");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
