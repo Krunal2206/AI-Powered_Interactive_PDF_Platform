@@ -1,0 +1,129 @@
+rules_version = '2';
+
+// =============================================================================
+//  ⚠️  READ THIS BEFORE DEPLOYING  ⚠️
+// -----------------------------------------------------------------------------
+//  These rules enforce per-user ownership by comparing `request.auth.uid`
+//  against the `userId` stored on each document. They assume Firebase
+//  Authentication is populating `request.auth` with the SAME id that the app
+//  writes into the `userId` fields.
+//
+//  THAT BRIDGE DOES NOT EXIST IN THIS PROJECT YET.
+//
+//  This app authenticates with **Clerk only**. `firebase.ts` initializes
+//  Firestore with `getFirestore(app)` and never calls `getAuth()`, so every
+//  client Firestore call runs UNAUTHENTICATED and `request.auth` is `null`.
+//  The `userId` fields hold the *Clerk* user id, which Firestore knows nothing
+//  about.
+//
+//  => Deploying these rules AS-IS will make `isSignedIn()` false for every
+//     request and DENY ALL client reads and writes — the dashboard, chat,
+//     upload, and delete flows will all break.
+//
+//  To actually use ownership rules you must first bridge Clerk -> Firebase Auth:
+//    1. Server-side, mint a Firebase custom token whose uid == the Clerk user
+//       id (e.g. in an API route using firebase-admin, which is NOT currently
+//       a dependency).
+//    2. Client-side, call `signInWithCustomToken(getAuth(), token)` before any
+//       Firestore access, so `request.auth.uid` === the Clerk user id that is
+//       stored in the `userId` fields below.
+//  Only then will these rules permit the app's existing queries.
+//
+//  Interim alternative (no Firebase Auth): route ALL Firestore access through
+//  the server API routes (already guarded by `authorizeDocumentAccess()` in
+//  lib/errorHandling.ts) using firebase-admin, and replace everything below
+//  with `allow read, write: if false;` to lock out the public client SDK.
+//
+//  Until one of the above is in place, DO NOT deploy this file.
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helpers -----------------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Look up the owner of a pdf-document by id (indirect ownership).
+    function documentOwner(documentId) {
+      return get(/databases/$(database)/documents/pdf-documents/$(documentId)).data.userId;
+    }
+
+    // Look up the owner of a chat-session by id (indirect ownership).
+    function sessionOwner(sessionId) {
+      return get(/databases/$(database)/documents/chat-sessions/$(sessionId)).data.userId;
+    }
+
+    // --- pdf-documents: owned directly via `userId` ------------------------
+
+    match /pdf-documents/{documentId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      // Owner may update, but may not reassign the document to another user.
+      allow update: if isOwner(resource.data.userId)
+                    && request.resource.data.userId == resource.data.userId;
+    }
+
+    // --- chat-sessions: owned directly via `userId` ------------------------
+
+    match /chat-sessions/{sessionId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId)
+                    && request.resource.data.userId == resource.data.userId;
+    }
+
+    // --- chat-messages: no userId; owned via parent chat-session -----------
+    // NOTE: `get()` runs once per evaluated document. For list queries
+    // (`where("sessionId","==",…)`) Firestore evaluates the rule per returned
+    // doc, so this incurs one lookup per message.
+
+    match /chat-messages/{messageId} {
+      allow read, delete: if isOwner(sessionOwner(resource.data.sessionId));
+      allow create: if isOwner(sessionOwner(request.resource.data.sessionId));
+      allow update: if isOwner(sessionOwner(resource.data.sessionId))
+                    && request.resource.data.sessionId == resource.data.sessionId;
+    }
+
+    // --- pdf-chunks: no userId; owned via parent pdf-document --------------
+    // documentId lives at `metadata.documentId`.
+
+    match /pdf-chunks/{chunkId} {
+      allow read, delete: if isOwner(documentOwner(resource.data.metadata.documentId));
+      allow create: if isOwner(documentOwner(request.resource.data.metadata.documentId));
+      allow update: if isOwner(documentOwner(resource.data.metadata.documentId))
+                    && request.resource.data.metadata.documentId == resource.data.metadata.documentId;
+    }
+
+    // --- processing-status: no userId; owned via parent pdf-document -------
+
+    match /processing-status/{statusId} {
+      allow read, delete: if isOwner(documentOwner(resource.data.documentId));
+      allow create: if isOwner(documentOwner(request.resource.data.documentId));
+      allow update: if isOwner(documentOwner(resource.data.documentId))
+                    && request.resource.data.documentId == resource.data.documentId;
+    }
+
+    // --- upload-usage: one doc per user (id == userId), monthly upload quota --
+    // Server-maintained counter behind the free-tier "10 uploads / month" cap.
+    // Clients only read it; it must never be deletable (that would refund quota).
+
+    match /upload-usage/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId)
+                            && request.resource.data.userId == userId;
+      allow delete: if false;
+    }
+
+    // Deny everything not explicitly matched above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
