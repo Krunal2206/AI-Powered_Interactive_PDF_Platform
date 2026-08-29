@@ -1,7 +1,7 @@
 "use client";
 
 import { Document } from "@/types/upload";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { deleteDocument, getUserDocuments } from "@/lib/firebaseops";
 import { Button } from "@/components/ui/button";
@@ -45,18 +45,7 @@ const Page = () => {
   const endIndex = currentPage * ITEMS_PER_PAGE - 1;
   const paginatedDocuments = filteredDocuments.slice(startIndex, endIndex);
 
-  useEffect(() => {
-    if (user?.id) {
-      fetchDocuments();
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-    filterDocuments();
-  }, [documents, searchTerm, sortOption]);
-
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     if (!user?.id) return;
 
     try {
@@ -68,9 +57,9 @@ const Page = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
-  const filterDocuments = () => {
+  const filterDocuments = useCallback(() => {
     let filtered = documents;
 
     if (searchTerm) {
@@ -108,7 +97,16 @@ const Page = () => {
     });
 
     setFilteredDocuments(sorted);
-  };
+  }, [documents, searchTerm, sortOption]);
+
+  useEffect(() => {
+    void fetchDocuments();
+  }, [fetchDocuments]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    filterDocuments();
+  }, [filterDocuments]);
 
   const handleDeleteDocument = async (documentId: string) => {
     const confirmed = await confirm({
@@ -141,7 +139,7 @@ const Page = () => {
       a.download = document.originalFilename || `${document.title}.pdf`;
       window.document.body.appendChild(a);
       a.click();
-      window.document.body.removeChild(a);
+      a.remove();
       URL.revokeObjectURL(url);
     } catch {
       toast.error("Failed to download document. Please try again.");
