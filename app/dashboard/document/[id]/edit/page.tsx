@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
@@ -32,11 +32,35 @@ const DocumentEditPage = () => {
 
   const documentId = params.id as string;
 
-  useEffect(() => {
-    if (documentId && user?.id) {
-      fetchDocument();
+  const fetchDocument = useCallback(async () => {
+    try {
+      setLoading(true);
+      const doc = await getDocument(documentId);
+
+      if (!doc) {
+        setError("Document not found");
+        return;
+      }
+
+      if (doc.userId !== user?.id) {
+        setError("Access denied");
+        return;
+      }
+
+      setDocument(doc);
+    } catch (err) {
+      console.error("Error fetching document:", err);
+      setError("Failed to load document");
+    } finally {
+      setLoading(false);
     }
   }, [documentId, user?.id]);
+
+  useEffect(() => {
+    if (documentId && user?.id) {
+      void fetchDocument();
+    }
+  }, [documentId, fetchDocument, user?.id]);
 
   useEffect(() => {
     if (document) {
@@ -52,31 +76,6 @@ const DocumentEditPage = () => {
       setHasChanges(titleChanged || descriptionChanged);
     }
   }, [title, description, document]);
-
-  const fetchDocument = async () => {
-    try {
-      setLoading(true);
-      const doc = await getDocument(documentId);
-
-      if (!doc) {
-        setError("Document not found");
-        return;
-      }
-
-      // Check if user owns this document
-      if (doc.userId !== user?.id) {
-        setError("Access denied");
-        return;
-      }
-
-      setDocument(doc);
-    } catch (err) {
-      console.error("Error fetching document:", err);
-      setError("Failed to load document");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSave = async () => {
     if (!document || !hasChanges) return;
