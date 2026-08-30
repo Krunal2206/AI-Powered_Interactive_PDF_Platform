@@ -65,13 +65,7 @@ const DocumentViewPage = () => {
 
   const documentId = params.id as string;
 
-  useEffect(() => {
-    if (documentId && user?.id) {
-      fetchDocument();
-    }
-  }, [documentId, user?.id]);
-
-  const fetchDocument = async () => {
+  const fetchDocument = useCallback(async () => {
     try {
       setLoading(true);
       const doc = await getDocument(documentId);
@@ -81,7 +75,6 @@ const DocumentViewPage = () => {
         return;
       }
 
-      // Check if user owns this document
       if (doc.userId !== user?.id) {
         setError("Access denied");
         return;
@@ -94,7 +87,13 @@ const DocumentViewPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [documentId, user?.id]);
+
+  useEffect(() => {
+    if (documentId && user?.id) {
+      void fetchDocument();
+    }
+  }, [documentId, fetchDocument, user?.id]);
 
   const handleDelete = async () => {
     const confirmed = confirmDelete();
@@ -126,7 +125,7 @@ const DocumentViewPage = () => {
         window.document.body.removeChild(a);
         URL.revokeObjectURL(url);
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to download document. Please try again.");
     }
   };
