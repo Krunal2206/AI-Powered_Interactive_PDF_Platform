@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getUserDocuments } from "@/lib/firebaseops";
 import { Document } from "@/types/upload";
 import ProfileSkeleton from "@/components/ProfilePage/ProfileSkeleton";
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import Image from "next/image";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -55,13 +56,7 @@ export default function ProfilePage() {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user?.id) {
-      loadStats();
-    }
-  }, [user?.id]);
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     if (!user?.id) return;
     try {
       setLoading(true);
@@ -98,7 +93,11 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    void loadStats();
+  }, [loadStats]);
 
   if (!isLoaded) {
     return <ProfileSkeleton />;
@@ -160,9 +159,11 @@ export default function ProfilePage() {
             {/* Avatar */}
             <div className="relative">
               {user?.imageUrl ? (
-                <img
+                <Image
                   src={user.imageUrl}
                   alt={user.fullName || "User avatar"}
+                  width={96}
+                  height={96}
                   className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-purple-500/30 shadow-lg shadow-purple-500/10"
                 />
               ) : (
