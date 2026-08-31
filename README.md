@@ -12,7 +12,7 @@ An intelligent document platform that lets you upload PDFs and have real-time AI
 - **Secure by Default** — Clerk authentication, per-user data isolation, ownership checks on every API route
 - **Rate Limiting** — Upstash Redis-backed rate limiting on upload, process, and chat endpoints
 - **Cascade Delete** — Deleting a document removes Cloudinary files, Pinecone vectors, and all chat history
-- **Upload Enforcement** — Free tier capped at 3 documents per user
+- **Upload Enforcement** — Free tier capped at 10 uploads per user per month
 - **Document Search & Filtering** — Search and filter documents from the dashboard
 - **Error Boundaries** — Three-tier error boundary system (`ErrorBoundary`, `InlineErrorBoundary`, custom fallbacks) with graceful recovery
 - **Toast Notifications** — Context-based toast system with animated progress bars and variant support (success, error, warning, info)
