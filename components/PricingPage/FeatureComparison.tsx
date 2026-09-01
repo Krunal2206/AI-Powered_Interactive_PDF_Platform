@@ -6,7 +6,23 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
+import { Check, Clock } from "lucide-react";
 import { featureComparison } from "./PricingData";
+
+const renderValue = (value: string) => {
+  if (value === "✓") {
+    return <Check className="w-5 h-5 text-green-400 mx-auto" />;
+  }
+  if (value === "Coming soon") {
+    return (
+      <span className="inline-flex items-center justify-center gap-1.5 text-slate-500">
+        <Clock className="w-4 h-4 shrink-0" />
+        <span className="text-sm">Coming soon</span>
+      </span>
+    );
+  }
+  return <span className="text-white">{value}</span>;
+};
 
 const FeatureComparison = () => {
   return (
@@ -35,10 +51,18 @@ const FeatureComparison = () => {
         {featureComparison.map((row) => (
           <TableRow key={row.feature} className="border-b border-slate-700/50">
             <TableCell className="p-6 font-medium">{row.feature}</TableCell>
-            <td className="p-6 text-center text-slate-400">{row.free}</td>
-            <TableCell className="p-6 text-center">{row.pro}</TableCell>
-            <TableCell className="p-6 text-center">{row.team}</TableCell>
-            <TableCell className="p-6 text-center">{row.enterprise}</TableCell>
+            <TableCell className="p-6 text-center">
+              {renderValue(row.free)}
+            </TableCell>
+            <TableCell className="p-6 text-center">
+              {renderValue(row.pro)}
+            </TableCell>
+            <TableCell className="p-6 text-center">
+              {renderValue(row.team)}
+            </TableCell>
+            <TableCell className="p-6 text-center">
+              {renderValue(row.enterprise)}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>
