@@ -49,7 +49,7 @@ const Navbar = () => (
                 asChild
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg"
               >
-                <Link href="/dashboard" prefetch={false} className="flex items-center">
+                <Link href="/dashboard" className="flex items-center">
                   Get Started
                 </Link>
               </Button>
@@ -62,7 +62,7 @@ const Navbar = () => (
           asChild
           className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white w-full"
         >
-          <Link href="/dashboard" prefetch={false} className="flex items-center justify-center">
+          <Link href="/dashboard" className="flex items-center justify-center">
             Get Started
           </Link>
         </Button>
