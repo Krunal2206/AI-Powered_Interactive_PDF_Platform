@@ -51,7 +51,11 @@ const HeroSection = () => {
               size="lg"
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-6 text-lg font-semibold shadow-2xl hover:shadow-purple-500/25 transition-all duration-300"
             >
-              <Link href={"/dashboard"} className="flex items-center">
+              <Link
+                href="/dashboard"
+                prefetch={false}
+                className="flex items-center"
+              >
                 Get Started
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
@@ -78,6 +82,7 @@ const HeroSection = () => {
           className="rounded-lg shadow-2xl w-[80%] mx-auto"
           width={700}
           height={700}
+          sizes="(max-width: 875px) 80vw, 700px"
           priority
         />
       </div>
