@@ -5,38 +5,53 @@ import { Menu, MessageCircle, Upload, X } from "lucide-react";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 
-const NavigationItems = () => (
-  <>
-    <Link
-      href="/pricing"
-      className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
-    >
-      Pricing
-    </Link>
+const NAV_LINKS = [
+  { href: "/pricing", label: "Pricing" },
+  { href: "/dashboard", label: "My Documents", exact: true },
+  { href: "/dashboard/profile", label: "Profile" },
+];
 
-    <Link
-      href="/dashboard"
-      className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
-    >
-      My Documents
-    </Link>
+interface NavigationItemsProps {
+  onItemClick?: () => void;
+  isMobile?: boolean;
+}
 
-    <Link
-      href="/dashboard/profile"
-      className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
-    >
-      Profile
-    </Link>
+const NavigationItems = ({ onItemClick, isMobile }: NavigationItemsProps) => {
+  const pathname = usePathname();
 
-    <Link
-      href="/dashboard/upload"
-      className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 font-bold flex items-center space-x-1 justify-center"
-    >
-      <Upload className="w-5 h-5 mr-2" /> Upload Document
-    </Link>
-  </>
-);
+  return (
+    <>
+      {NAV_LINKS.map(({ href, label, exact }) => {
+        const isActive = exact ? pathname === href : pathname.startsWith(href);
+
+        return (
+          <Link
+            key={href}
+            href={href}
+            onClick={onItemClick}
+            aria-current={isActive ? "page" : undefined}
+            className={`transition-colors text-sm font-medium ${
+              isActive
+                ? "text-purple-400 font-semibold"
+                : "text-gray-300 hover:text-white"
+            } ${isMobile ? "py-2 px-3 rounded-md hover:bg-white/5" : ""}`}
+          >
+            {label}
+          </Link>
+        );
+      })}
+      <Link
+        href="/dashboard/upload"
+        onClick={onItemClick}
+        className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 font-bold flex items-center space-x-1 justify-center shadow-md shadow-purple-500/20"
+      >
+        <Upload className="w-5 h-5 mr-2" /> Upload Document
+      </Link>
+    </>
+  );
+};
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

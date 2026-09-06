@@ -47,6 +47,6 @@ const CTASection = () => {
       </div>
     </section>
   );
-}
+};
 
-export default CTASection
+export default CTASection;
