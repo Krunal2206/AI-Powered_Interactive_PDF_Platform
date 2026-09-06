@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ScrollText } from "lucide-react";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Terms of Service — Chat with PDF",
@@ -166,12 +167,12 @@ export default function TermsPage() {
             <TermsSection title="12. Contact">
               <p>
                 For questions about these terms, please visit our{" "}
-                <a
+                <Link
                   href="/contact"
                   className="text-purple-400 hover:text-purple-300 underline underline-offset-2"
                 >
                   contact page.
-                </a>
+                </Link>
               </p>
             </TermsSection>
           </div>

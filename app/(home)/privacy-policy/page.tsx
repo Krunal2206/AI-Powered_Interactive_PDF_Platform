@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Shield } from "lucide-react";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Chat with PDF",
@@ -157,12 +158,12 @@ export default function PrivacyPolicyPage() {
               <p>
                 If you have questions about this privacy policy, please contact
                 us through our{" "}
-                <a
+                <Link
                   href="/contact"
                   className="text-purple-400 hover:text-purple-300 underline underline-offset-2"
                 >
                   contact page
-                </a>
+                </Link>
                 .
               </p>
             </PolicySection>
@@ -176,10 +177,10 @@ export default function PrivacyPolicyPage() {
 function PolicySection({
   title,
   children,
-}: {
+}: Readonly<{
   title: string;
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <div className="space-y-3">
       <h2 className="text-xl font-semibold text-white">{title}</h2>
