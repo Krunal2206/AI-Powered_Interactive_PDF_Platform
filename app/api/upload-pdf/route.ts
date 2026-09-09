@@ -1,8 +1,13 @@
 import cloudinary from "@/cloudinary";
-import { addDocument, getUserDocumentCount } from "@/lib/firebaseops";
+import {
+  addDocument,
+  getMonthlyUploadCount,
+  recordMonthlyUpload,
+} from "@/lib/firebaseops";
 import { uploadLimiter, applyRateLimit } from "@/lib/rateLimit";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import type { UploadApiResponse } from "cloudinary";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,13 +20,13 @@ export async function POST(request: NextRequest) {
     const blocked = await applyRateLimit(uploadLimiter, userId);
     if (blocked) return blocked;
 
-    const FREE_TIER_LIMIT = 10; // Max 10 files per user
-    const documentCount = await getUserDocumentCount(userId);
-    if (documentCount >= FREE_TIER_LIMIT) {
+    const MONTHLY_UPLOAD_LIMIT = 10; // Max 10 uploads per user per calendar month
+    const uploadsThisMonth = await getMonthlyUploadCount(userId);
+    if (uploadsThisMonth >= MONTHLY_UPLOAD_LIMIT) {
       return NextResponse.json(
         {
-          error: "Upload limit reached",
-          message: `Free accounts are limited to ${FREE_TIER_LIMIT} documents. Delete an existing document to upload a new one.`,
+          error: "Monthly upload limit reached",
+          message: `Free accounts can upload up to ${MONTHLY_UPLOAD_LIMIT} PDFs per month. Your quota resets at the start of next month.`,
         },
         { status: 403 },
       );
@@ -50,10 +55,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    if (buffer.subarray(0, 4).toString("ascii") !== "%PDF") {
+      return NextResponse.json(
+        { error: "The uploaded file is not a valid PDF" },
+        { status: 400 }
+      );
+    }
 
-    let cloudinaryResult: any;
+    let cloudinaryResult: UploadApiResponse;
     try {
       cloudinaryResult = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
@@ -67,6 +77,8 @@ export async function POST(request: NextRequest) {
           (error, uploadResult) => {
             if (error) {
               reject(error);
+            } else if (!uploadResult) {
+              reject(new Error("Cloudinary upload returned no result"));
             } else {
               resolve(uploadResult);
             }
@@ -111,6 +123,15 @@ export async function POST(request: NextRequest) {
         { error: "Failed to save document data" },
         { status: 500 }
       );
+    }
+
+    // Count this upload against the user's monthly quota. Best-effort: the
+    // document is already stored, so a counter write failure must not fail the
+    // request (it only risks a small undercount, which favors the user).
+    try {
+      await recordMonthlyUpload(userId);
+    } catch (error) {
+      console.error("Error recording monthly upload usage:", error);
     }
 
     return NextResponse.json({
