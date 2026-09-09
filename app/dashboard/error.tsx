@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { startTransition, useEffect } from "react";
 import { AlertTriangle, RefreshCw, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function DashboardError({
   error,
@@ -11,9 +13,18 @@ export default function DashboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }>) {
+  const router = useRouter();
+
   useEffect(() => {
     console.error("[app/dashboard/error.tsx]", error);
   }, [error]);
+
+  const handleReset = () => {
+    startTransition(() => {
+      router.refresh();
+      reset();
+    });
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-75 p-8 text-center">
@@ -35,22 +46,12 @@ export default function DashboardError({
           <p className="text-xs font-mono text-red-400 bg-red-950/30 border border-red-800/40 rounded-lg p-3 break-words">
             {error.message}
           </p>
-          {error.stack && (
-            <details className="mt-2 text-xs">
-              <summary className="cursor-pointer text-slate-500 hover:text-slate-400 select-none">
-                Show stack trace
-              </summary>
-              <pre className="mt-2 text-red-400/80 bg-red-950/20 border border-red-800/30 rounded-lg p-3 max-h-64 overflow-y-auto whitespace-pre-wrap break-words">
-                {error.stack}
-              </pre>
-            </details>
-          )}
         </div>
       )}
 
       <div className="flex items-center gap-3 mt-4">
         <Button
-          onClick={reset}
+          onClick={handleReset}
           className="bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
         >
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -59,11 +60,13 @@ export default function DashboardError({
 
         <Button
           variant="outline"
-          onClick={() => (window.location.href = "/dashboard")}
+          asChild
           className="border-white/20 hover:bg-white/10 hover:text-white cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to dashboard
+          <Link href={"/dashboard"}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to dashboard
+          </Link>
         </Button>
       </div>
     </div>
