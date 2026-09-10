@@ -2,7 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Home, RefreshCw } from "lucide-react";
-import { useEffect } from "react";
+import { startTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function AppError({
   error,
@@ -11,9 +13,18 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }>) {
+  const router = useRouter();
+
   useEffect(() => {
     console.error("[app/error.tsx]", error);
   }, [error]);
+
+  const handleReset = () => {
+    startTransition(() => {
+      router.refresh();
+      reset();
+    });
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center">
@@ -49,7 +60,7 @@ export default function AppError({
 
       <div className="flex items-center gap-3 mt-4">
         <Button
-          onClick={reset}
+          onClick={handleReset}
           className="bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
         >
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -58,11 +69,13 @@ export default function AppError({
 
         <Button
           variant="outline"
-          onClick={() => (window.location.href = "/")}
+          asChild
           className="border-white/20 hover:bg-white/10 hover:text-white cursor-pointer"
         >
-          <Home className="w-4 h-4 mr-2" />
-          Back home
+          <Link href="/">
+            <Home className="w-4 h-4 mr-2" />
+            Back home
+          </Link>
         </Button>
       </div>
     </div>
