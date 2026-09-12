@@ -1,5 +1,6 @@
 import { Mail, MessageCircle, Github, Twitter, Linkedin } from "lucide-react";
 import ContactForm from "@/components/ContactPage/ContactForm";
+import Link from "next/link";
 
 const socialLinks = [
   {
@@ -87,16 +88,14 @@ export default function ContactPage() {
                 </h3>
                 <div className="space-y-3">
                   {socialLinks.map((social) => (
-                    <a
+                    <Link
                       key={social.label}
                       href={social.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10 text-slate-400 transition-all duration-300 ${social.color}`}
                     >
                       <social.icon className="w-5 h-5" />
                       <span className="font-medium">{social.label}</span>
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </div>
