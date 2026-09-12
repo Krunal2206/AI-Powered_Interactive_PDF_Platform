@@ -11,8 +11,7 @@ import {
   MessageSquare,
   Minimize2,
 } from "lucide-react";
-import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 import { Document as DocumentType } from "@/types/upload";
 import { PDFViewer } from "@/components/PdfChatPage/PDFViewer";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -20,9 +19,12 @@ import { ChatPageSkeleton } from "@/components/PdfChatPage/ChatPageSkeleton";
 import { ErrorMessage } from "@/components/DashboardPage/ErrorMessage";
 import { ChatPanel } from "@/components/PdfChatPage/ChatPanel";
 
-const Page = () => {
-  const params = useParams();
-  const documentId = params.id as string;
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+const Page = ({ params }: PageProps) => {
+  const { id: documentId } = use(params);
   const { user } = useUser();
   const { goToDocument, goToDashboard } = useDocumentNavigation();
   const [isFullscreen, setIsFullscreen] = useState(false);
