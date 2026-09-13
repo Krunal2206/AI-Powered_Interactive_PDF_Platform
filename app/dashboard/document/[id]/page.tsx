@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState, use } from "react";
 import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,8 +37,12 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
-const DocumentViewPage = () => {
-  const params = useParams();
+interface DocumentViewPageProps {
+  params: Promise<{ id: string }>;
+}
+
+const DocumentViewPage = ({ params }: DocumentViewPageProps) => {
+  const { id: documentId } = use(params);
   const { user } = useUser();
   const [document, setDocument] = useState<Document | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,8 +65,6 @@ const DocumentViewPage = () => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [computePageWidth]);
-
-  const documentId = params.id as string;
 
   const fetchDocument = useCallback(async () => {
     try {
