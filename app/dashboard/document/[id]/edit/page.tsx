@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState, use } from "react";
 import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,8 +15,12 @@ import { useDocumentNavigation } from "@/lib/navigationUtils";
 import { useToast } from "@/hooks/useToast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
-const DocumentEditPage = () => {
-  const params = useParams();
+interface DocumentEditPageProps {
+  params: Promise<{ id: string }>;
+}
+
+const DocumentEditPage = ({ params }: DocumentEditPageProps) => {
+  const { id: documentId } = use(params);
   const { user } = useUser();
   const [document, setDocument] = useState<Document | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,8 +32,6 @@ const DocumentEditPage = () => {
   const { goToDocument, goToDashboard } = useDocumentNavigation();
   const toast = useToast();
   const { confirm, ConfirmDialogComponent } = useConfirm();
-
-  const documentId = params.id as string;
 
   const fetchDocument = useCallback(async () => {
     try {
