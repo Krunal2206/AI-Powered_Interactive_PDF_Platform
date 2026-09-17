@@ -1,10 +1,10 @@
 "use client";
 
-import { SignedIn, UserButton } from "@clerk/nextjs";
+import { ClerkLoaded, ClerkLoading, SignedIn, UserButton } from "@clerk/nextjs";
 import { Menu, MessageCircle, Upload, X } from "lucide-react";
 import { Button } from "../ui/button";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 const NAV_LINKS = [
@@ -55,9 +55,14 @@ const NavigationItems = ({ onItemClick, isMobile }: NavigationItemsProps) => {
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   return (
-    <nav className="sticky top-0 z-50 bg-black/20 backdrop-blur-xl border-b border-white/10">
+    <header className="sticky top-0 z-50 bg-black/20 backdrop-blur-xl border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center space-x-3">
@@ -72,31 +77,42 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <div className="items-center space-x-4 hidden md:flex">
+            <nav
+              aria-label="Desktop Navigation"
+              className="items-center space-x-4 hidden md:flex"
+            >
               <NavigationItems />
-            </div>
+            </nav>
 
             <SignedIn>
-              <UserButton
-                appearance={{
-                  elements: {
-                    userButtonPopoverActionButton: {
-                      color: "#4CAF50",
-                      fontWeight: "500",
+              <ClerkLoading>
+                <div className="w-8 h-8 rounded-full bg-white/10 animate-pulse"></div>
+              </ClerkLoading>
+              <ClerkLoaded>
+                <UserButton
+                  appearance={{
+                    elements: {
+                      userButtonPopoverActionButton: {
+                        color: "#4CAF50",
+                        fontWeight: "500",
+                      },
+                      userButtonPopoverActionButton__signOut: {
+                        color: "#e53935",
+                        fontWeight: "bold",
+                      },
                     },
-                    userButtonPopoverActionButton__signOut: {
-                      color: "#e53935",
-                      fontWeight: "bold",
-                    },
-                  },
-                }}
-              />
+                  }}
+                />
+              </ClerkLoaded>
             </SignedIn>
 
             <div className="md:hidden">
               <Button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="text-white p-2"
+                aria-label={"Toggle navigation menu"}
+                aria-expanded={mobileMenuOpen}
+                aria-controls="mobile-nav-menu"
               >
                 {mobileMenuOpen ? (
                   <X className="w-6 h-6" />
@@ -109,14 +125,21 @@ const Navbar = () => {
         </div>
 
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-white/10">
+          <nav
+            id="mobile-nav-menu"
+            aria-label="Mobile Navigation"
+            className="md:hidden py-4 border-t border-white/10"
+          >
             <div className="flex flex-col space-y-4">
-              <NavigationItems />
+              <NavigationItems
+                isMobile
+                onItemClick={() => setMobileMenuOpen(false)}
+              />
             </div>
-          </div>
+          </nav>
         )}
       </div>
-    </nav>
+    </header>
   );
 };
 
