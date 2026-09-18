@@ -60,17 +60,17 @@ const FeaturesSection = () => {
             </span>
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Discover the capabilities that make PDFChat the ultimate solution
+            Discover the capabilities that make Chat with PDF the ultimate solution
             for document interaction and management.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature, index) => {
+          {features.map((feature) => {
             const IconComponent = feature.icon;
             return (
               <Card
-                key={index}
+                key={feature.name}
                 className="group bg-white/5 backdrop-blur-lg border-white/10 hover:border-purple-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10"
               >
                 <CardHeader>
