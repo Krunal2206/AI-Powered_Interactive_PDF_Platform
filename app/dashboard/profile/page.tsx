@@ -19,8 +19,9 @@ import {
   Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import Image from "next/image";
+
+const CLERK_MANAGE_URL = process.env.NEXT_PUBLIC_CLERK_MANAGE_PROFILE_URL || "#";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -210,15 +211,15 @@ export default function ProfilePage() {
                 asChild
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold cursor-pointer"
               >
-                <Link
-                  href={`${process.env.NEXT_PUBLIC_CLERK_MANAGE_PROFILE_URL}`}
+                <a
+                  href={CLERK_MANAGE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   <Shield className="w-4 h-4 mr-2" />
                   Manage Account
                   <ExternalLink className="w-3.5 h-3.5 ml-2" />
-                </Link>
+                </a>
               </Button>
             </div>
           </div>
