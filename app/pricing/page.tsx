@@ -2,6 +2,7 @@ import FeatureComparison from "@/components/PricingPage/FeatureComparison";
 import Faq from "@/components/PricingPage/Faq";
 import Banner from "@/components/PricingPage/Banner";
 import SubscriptionPlans from "@/components/PricingPage/SubscriptionPlans";
+import { faqs } from "@/components/PricingPage/PricingData";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -15,9 +16,26 @@ export const metadata: Metadata = {
   },
 };
 
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: faq.answer,
+    },
+  })),
+};
+
 const Page = () => {
   return (
     <div className="min-h-screen text-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       {/* Header */}
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-16">
