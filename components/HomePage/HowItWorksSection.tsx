@@ -17,7 +17,7 @@ const HowItWorksSection = () => {
             How It Works
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Get started with PDFChat in just three simple steps and transform
+            Get started with Chat with PDF in just three simple steps and transform
             how you interact with your documents.
           </p>
         </div>

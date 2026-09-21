@@ -19,7 +19,7 @@ const CTASection = () => {
         </h2>
         <p className="text-xl text-purple-100 mb-8 leading-relaxed max-w-2xl mx-auto">
           Join thousands of users who have revolutionized their document
-          workflow with PDFChat. Start your journey today with our free tier.
+          workflow with Chat with PDF. Start your journey today with our free tier.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button
