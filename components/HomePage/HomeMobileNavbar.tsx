@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "../ui/button";
 import { Menu, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 type HomeMobileNavbarProps = {
   header: ReactNode;
@@ -11,6 +12,11 @@ type HomeMobileNavbarProps = {
 
 const HomeMobileNavbar = ({ header, children }: HomeMobileNavbarProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
 
   return (
     <>
