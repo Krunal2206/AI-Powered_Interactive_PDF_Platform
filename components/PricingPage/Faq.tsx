@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { faqs } from "./PricingData";
 import { useState } from "react";
@@ -6,18 +6,24 @@ import { ChevronDown } from "lucide-react";
 
 const Faq = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
-  
+
   return (
     <div className="max-w-3xl mx-auto space-y-4">
       {faqs.map((faq, index) => {
         const isOpen = openIndex === index;
+        const questionId = `faq-question-${index}`;
+        const answerId = `faq-answer-${index}`;
         return (
           <div
             key={faq.question}
             className="bg-slate-900/50 backdrop-blur-sm rounded-xl border border-slate-700 overflow-hidden transition-all duration-300"
           >
             <button
+              type="button"
+              id={questionId}
               onClick={() => setOpenIndex(isOpen ? null : index)}
+              aria-expanded={isOpen}
+              aria-controls={answerId}
               className="w-full flex items-center justify-between p-6 text-left font-semibold text-lg text-purple-300 hover:bg-slate-800/30 transition-colors focus:outline-none cursor-pointer"
             >
               <span className={isOpen ? "text-purple-400" : "text-slate-100"}>
@@ -30,6 +36,9 @@ const Faq = () => {
               />
             </button>
             <div
+              id={answerId}
+              role="region"
+              aria-labelledby={questionId}
               className={`transition-all duration-300 ease-in-out overflow-hidden ${
                 isOpen
                   ? "max-h-[300px] opacity-100 border-t border-slate-800/50"
@@ -45,6 +54,6 @@ const Faq = () => {
       })}
     </div>
   );
-}
+};
 
-export default Faq
+export default Faq;
