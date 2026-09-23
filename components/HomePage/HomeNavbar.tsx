@@ -5,18 +5,18 @@ import HomeMobileNavbar from "./HomeMobileNavbar";
 
 const NavigationItems = () => (
   <>
-    <a
-      href="#features"
+    <Link
+      href="/#features"
       className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
     >
       Features
-    </a>
-    <a
-      href="#how-it-works"
+    </Link>
+    <Link
+      href="/#how-it-works"
       className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
     >
       How it Works
-    </a>
+    </Link>
     <Link
       href="/pricing"
       className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
