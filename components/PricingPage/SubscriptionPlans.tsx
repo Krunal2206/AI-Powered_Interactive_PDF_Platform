@@ -1,14 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "../ui/button";
 import { plans } from "./PricingData";
-import { Check, X } from "lucide-react";
+import { Check, Clock } from "lucide-react";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { CheckoutButton, usePlans } from "@clerk/nextjs/experimental";
 
 const SubscriptionPlans = () => {
-  const router = useRouter();
   const { isSignedIn } = useUser();
   const { openSignIn } = useClerk();
   const { data: clerkPlans, isLoading: plansLoading } = usePlans({
@@ -25,16 +24,6 @@ const SubscriptionPlans = () => {
     return `${fee.currencySymbol}${Math.round(fee.amount / 100)}`;
   };
 
-  const handleStaticPlanClick = (plan: (typeof plans)[number]) => {
-    if (plan.href?.startsWith("mailto:")) {
-      window.location.href = plan.href;
-      return;
-    }
-    if (plan.href) {
-      router.push(plan.href);
-    }
-  };
-
   return (
     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
       {plans.map((plan) => {
@@ -43,10 +32,10 @@ const SubscriptionPlans = () => {
         const displayName = live?.name ?? plan.name;
         const displayDescription = live?.description || plan.description;
         const displayPrice = formatPrice(live?.fee) ?? plan.price;
-        const displayFeatures =
-          live && live.features.length > 0
-            ? live.features.map((f) => f.name)
-            : plan.features;
+        // Feature list is always driven by the curated local data so it can
+        // carry the per-feature "coming soon" flag. Clerk still supplies the
+        // live name, description, and price above.
+        const displayFeatures = plan.features;
 
         const buttonClassName = `w-full py-3 px-6 rounded-xl font-medium transition-all duration-300 cursor-pointer ${
           plan.buttonVariant === "primary"
@@ -86,24 +75,27 @@ const SubscriptionPlans = () => {
               <p className="text-slate-400 text-sm">{displayDescription}</p>
             </div>
             <div className="space-y-3 mb-8">
-              {displayFeatures.map((feature) => (
-                <div
-                  key={`${plan.slug}-${feature}`}
-                  className="flex items-center space-x-3"
-                >
-                  <Check className="w-5 h-5 text-green-400 shrink-0" />
-                  <span className="text-sm">{feature}</span>
-                </div>
-              ))}
-              {plan.limitations.map((limitation) => (
-                <div
-                  key={`${plan.slug}-${limitation}`}
-                  className="flex items-center space-x-3"
-                >
-                  <X className="w-5 h-5 text-red-400 shrink-0" />
-                  <span className="text-sm text-slate-400">{limitation}</span>
-                </div>
-              ))}
+              {displayFeatures.map((feature) =>
+                feature.soon ? (
+                  <div
+                    key={`${plan.slug}-${feature.label}`}
+                    className="flex items-center space-x-3"
+                  >
+                    <Clock className="w-5 h-5 text-slate-500 shrink-0" />
+                    <span className="text-sm text-slate-500">
+                      {feature.label} — Coming soon
+                    </span>
+                  </div>
+                ) : (
+                  <div
+                    key={`${plan.slug}-${feature.label}`}
+                    className="flex items-center space-x-3"
+                  >
+                    <Check className="w-5 h-5 text-green-400 shrink-0" />
+                    <span className="text-sm">{feature.label}</span>
+                  </div>
+                ),
+              )}
             </div>
 
             {plan.clerkPlan ? (
@@ -113,21 +105,27 @@ const SubscriptionPlans = () => {
                   planPeriod="month"
                   newSubscriptionRedirectUrl="/dashboard"
                 >
-                  <Button className={buttonClassName}>{plan.buttonText}</Button>
+                  <Button className={buttonClassName} aria-label={`${plan.name}: ${plan.buttonText}`}>{plan.buttonText}</Button>
                 </CheckoutButton>
               ) : (
                 <Button
                   className={buttonClassName}
                   onClick={() => openSignIn({ forceRedirectUrl: "/pricing" })}
+                  aria-label={`${plan.name}: ${plan.buttonText}`}
                 >
                   {plan.buttonText}
                 </Button>
               )
+            ) : plan.href?.startsWith("mailto:") ? (
+              <Button asChild className={buttonClassName} aria-label={`${plan.name}: ${plan.buttonText}`}>
+                <a href={plan.href}>{plan.buttonText}</a>
+              </Button>
+            ) : plan.href ? (
+              <Button asChild className={buttonClassName} aria-label={`${plan.name}: ${plan.buttonText}`}>
+                <Link href={plan.href}>{plan.buttonText}</Link>
+              </Button>
             ) : (
-              <Button
-                className={buttonClassName}
-                onClick={() => handleStaticPlanClick(plan)}
-              >
+              <Button className={buttonClassName} aria-label={`${plan.name}: ${plan.buttonText}`}>
                 {plan.buttonText}
               </Button>
             )}
