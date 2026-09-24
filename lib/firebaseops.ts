@@ -15,6 +15,7 @@ import {
   orderBy,
   query,
   QuerySnapshot,
+  runTransaction,
   Timestamp,
   updateDoc,
   where,
@@ -22,6 +23,9 @@ import {
 } from "firebase/firestore";
 
 const COLLECTION_NAME = "pdf-documents";
+// One doc per user (keyed by userId) tracking uploads in the current calendar
+// month. Powers the free-tier "10 uploads / month" quota.
+const UPLOAD_USAGE_COLLECTION = "upload-usage";
 
 function isTimestampLike(value: unknown): value is { toDate: () => Date } {
   return (
@@ -217,4 +221,52 @@ export async function getUserDocumentCount(userId: string): Promise<number> {
     console.error("Error counting user documents:", error);
     throw new Error("Failed to count documents");
   }
+}
+
+// Calendar-month key in UTC, e.g. "2026-08". The quota resets when this changes.
+function currentUploadPeriod(): string {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+// How many uploads the user has made in the current calendar month. Reads a
+// per-user counter that is only ever incremented (on a successful upload) and
+// reset at each month boundary — deleting a document does NOT free a slot.
+export async function getMonthlyUploadCount(userId: string): Promise<number> {
+  try {
+    const usageRef = doc(db, UPLOAD_USAGE_COLLECTION, userId);
+    const snapshot = await getDoc(usageRef);
+    const data = snapshot.data();
+    // Missing doc, or a counter left over from a previous month, counts as zero.
+    if (data?.period !== currentUploadPeriod()) return 0;
+    return typeof data.count === "number" ? data.count : 0;
+  } catch (error) {
+    console.error("Error reading monthly upload count:", error);
+    throw new Error("Failed to read upload usage");
+  }
+}
+
+// Records one upload against the current calendar month, starting a fresh count
+// when a new month has begun. Runs in a transaction so concurrent uploads don't
+// clobber each other's increment.
+export async function recordMonthlyUpload(userId: string): Promise<void> {
+  const usageRef = doc(db, UPLOAD_USAGE_COLLECTION, userId);
+  const period = currentUploadPeriod();
+
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(usageRef);
+    const data = snapshot.data();
+    const samePeriod = data?.period === period;
+    const previousCount =
+      samePeriod && typeof data?.count === "number" ? data.count : 0;
+
+    transaction.set(usageRef, {
+      userId,
+      period,
+      count: previousCount + 1,
+      updatedAt: Timestamp.now(),
+    });
+  });
 }
