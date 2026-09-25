@@ -1,6 +1,7 @@
 const ProfileSkeleton = () => {
   return (
-    <div className="min-h-screen p-4 sm:p-8">
+    <div className="min-h-screen p-4 sm:p-8" role="status" aria-label="Loading profile">
+      <span className="sr-only">Loading profile…</span>
       <div className="max-w-5xl mx-auto">
         <div className="mb-8">
           <div className="h-10 w-64 bg-slate-800/50 rounded-lg animate-pulse mb-2" />
