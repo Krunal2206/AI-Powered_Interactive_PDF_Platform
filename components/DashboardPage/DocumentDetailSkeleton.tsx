@@ -2,7 +2,8 @@ import { Skeleton } from "./Skeleton";
 
 export const DocumentDetailSkeleton = () => {
   return (
-    <div className="p-4 lg:p-8 min-h-screen">
+    <div className="p-4 lg:p-8 min-h-screen" role="status" aria-label="Loading document details">
+      <span className="sr-only">Loading document details…</span>
       <div className="max-w-4xl mx-auto">
         <Skeleton className="h-9 w-40 mb-6 lg:mb-8" />
 

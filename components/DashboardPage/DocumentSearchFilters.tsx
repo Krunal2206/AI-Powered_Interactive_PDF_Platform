@@ -30,7 +30,7 @@ export const DocumentSearchFilters: React.FC<DocumentSearchFiltersProps> = ({
   setSortOption,
 }) => {
   return (
-    <div className="mb-8 flex flex-col sm:flex-row gap-4">
+    <div className="mb-8 flex flex-col sm:flex-row gap-4" role="search" aria-label="Document search and filters">
       <div className="relative flex-1">
         <Search
           size={20}
@@ -40,6 +40,7 @@ export const DocumentSearchFilters: React.FC<DocumentSearchFiltersProps> = ({
           placeholder="Search documents..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          aria-label="Search documents"
           className="pl-10 bg-slate-800/50 border-slate-700 text-slate-300 placeholder-slate-500 focus:border-purple-500"
         />
       </div>
