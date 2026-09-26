@@ -20,10 +20,11 @@ import { Document } from "@/types/upload";
 import { formatDistanceToNow } from "date-fns";
 import { formatFileSize, getStatusTextColor } from "@/lib/documentUtils";
 import Image from "next/image";
+import Link from "next/link";
 
 interface DocumentCardProps {
   document: Document;
-  onView: (document: Document) => void;
+  href: string;
   onEdit: (document: Document) => void;
   onDelete: (documentId: string) => void;
   onDownload: (document: Document) => void;
@@ -35,7 +36,7 @@ const getThumbnailUrl = (cloudinaryUrl: string): string => {
 
 const DocumentCard: React.FC<DocumentCardProps> = ({
   document,
-  onView,
+  href,
   onEdit,
   onDownload,
   onDelete,
@@ -47,7 +48,10 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
     document.thumbnailUrl || getThumbnailUrl(document.cloudinaryUrl);
 
   return (
-    <div className="group relative aspect-3/4 bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 cursor-pointer hover:shadow-lg hover:shadow-purple-500/10 hover:scale-105 overflow-hidden">
+    <Link
+      href={href}
+      className="group relative aspect-3/4 bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 cursor-pointer hover:shadow-lg hover:shadow-purple-500/10 hover:scale-105 overflow-hidden block"
+    >
       {/* PDF thumbnail — fills top 60% of card */}
       <div className="absolute inset-0 bottom-[40%]">
         {!thumbnailError ? (
@@ -89,16 +93,6 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                onView(document);
-              }}
-              className="hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer transition-all duration-300"
-            >
-              <Eye size={16} className="mr-2" />
-              View
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
                 onEdit(document);
               }}
               className="hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer transition-all duration-300"
@@ -133,7 +127,6 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
       {/* Card body — bottom 40% */}
       <div
         className="absolute inset-x-0 bottom-0 h-[40%] p-3 flex flex-col justify-between"
-        onClick={() => onView(document)}
       >
         <div>
           <h3 className="text-slate-200 font-medium text-sm mb-1 line-clamp-2 group-hover:text-purple-300 transition-colors duration-300">
@@ -165,7 +158,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
 
       {/* Hover overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-600/0 to-purple-600/0 group-hover:from-purple-600/5 group-hover:to-purple-900/10 rounded-lg transition-all duration-300 pointer-events-none" />
-    </div>
+    </Link>
   );
 };
 
