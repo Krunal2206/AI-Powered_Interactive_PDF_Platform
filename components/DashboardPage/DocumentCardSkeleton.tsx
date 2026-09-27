@@ -2,7 +2,12 @@ import { Skeleton } from "./Skeleton";
 
 export const DocumentCardSkeleton = () => {
   return (
-    <div className="aspect-[3/4] bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg border border-slate-700/50 overflow-hidden p-4 flex flex-col">
+    <div
+      className="aspect-[3/4] bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-lg border border-slate-700/50 overflow-hidden p-4 flex flex-col"
+      role="status"
+      aria-label="Loading document"
+    >
+      <span className="sr-only">Loading document…</span>
       <div className="flex items-start justify-between mb-4">
         <Skeleton className="w-11 h-11 rounded-lg" />
         <Skeleton className="w-8 h-8 rounded-md" />
