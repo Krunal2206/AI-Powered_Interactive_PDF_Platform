@@ -32,8 +32,7 @@ const Page = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const { goToUpload, goToDocument, goToDocumentEdit } =
-    useDocumentNavigation();
+  const { goToDocumentEdit } = useDocumentNavigation();
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const toast = useToast();
 
@@ -221,13 +220,13 @@ const Page = () => {
           <DocumentGridSkeleton count={10} />
         ) : (
           <>
-            {currentPage === 1 && <AddDocumentCard onClick={goToUpload} />}
+            {currentPage === 1 && <AddDocumentCard />}
 
             {paginatedDocuments.map((document) => (
               <DocumentCard
                 key={document.id}
                 document={document}
-                onView={(document) => goToDocument(document.id)}
+                href={`/dashboard/document/${document.id}`}
                 onEdit={(document) => goToDocumentEdit(document.id)}
                 onDelete={handleDeleteDocument}
                 onDownload={handleDownloadDocument}
