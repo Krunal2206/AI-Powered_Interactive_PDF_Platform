@@ -26,7 +26,7 @@ interface PageProps {
 const Page = ({ params }: PageProps) => {
   const { id: documentId } = use(params);
   const { user } = useUser();
-  const { goToDocument, goToDashboard } = useDocumentNavigation();
+  const { goToDocument } = useDocumentNavigation();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -121,7 +121,7 @@ const Page = ({ params }: PageProps) => {
       <ErrorMessage
         title={error || "Document not found"}
         message="The document you're looking for doesn't exist or you don't have access to it."
-        onBackClick={() => goToDashboard()}
+        backHref="/dashboard"
       />
     );
   }
