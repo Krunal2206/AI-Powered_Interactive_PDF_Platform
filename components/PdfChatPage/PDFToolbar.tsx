@@ -41,6 +41,7 @@ export const PDFToolbar = ({
               size="sm"
               onClick={onPrevPage}
               disabled={pageNumber <= 1}
+              aria-label="Previous page"
               className="border-slate-700 hover:text-slate-300 hover:bg-slate-800/50 cursor-pointer px-3"
             >
               ←
@@ -53,6 +54,7 @@ export const PDFToolbar = ({
               size="sm"
               onClick={onNextPage}
               disabled={pageNumber >= numPages}
+              aria-label="Next page"
               className="border-slate-700 hover:text-slate-300 hover:bg-slate-800/50 cursor-pointer px-3"
             >
               →
@@ -64,6 +66,7 @@ export const PDFToolbar = ({
               variant="outline"
               size="sm"
               onClick={onZoomOut}
+              aria-label="Zoom out"
               className="border-slate-700 hover:text-slate-300 hover:bg-slate-800/50 cursor-pointer"
             >
               <ZoomOut className="w-4 h-4" />
@@ -75,6 +78,7 @@ export const PDFToolbar = ({
               variant="outline"
               size="sm"
               onClick={onZoomIn}
+              aria-label="Zoom in"
               className="border-slate-700 hover:text-slate-300 hover:bg-slate-800/50 cursor-pointer"
             >
               <ZoomIn className="w-4 h-4" />
@@ -87,6 +91,7 @@ export const PDFToolbar = ({
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
             <Input
               placeholder="Search in document..."
+              aria-label="Search in document"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-24 w-40 sm:w-64 bg-slate-800 border-slate-700 focus:border-purple-500 text-white text-sm"
@@ -101,6 +106,7 @@ export const PDFToolbar = ({
             variant="outline"
             size="sm"
             onClick={onDownload}
+            aria-label="Download document"
             className="border-slate-700 hover:text-slate-300 hover:bg-slate-800/50 cursor-pointer"
           >
             <Download className="w-4 h-4" />
