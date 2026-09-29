@@ -49,7 +49,7 @@ export const ProcessingStatus = ({
           </div>
 
           {/* Status Icon */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2" role="status" aria-live="polite">
             {isProcessing && (
               <div className="flex items-center space-x-2 text-blue-400">
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -171,7 +171,11 @@ export const ProcessingStatus = ({
 
         {/* Processing Info */}
         {isProcessing && (
-          <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-3">
+          <div
+            className="bg-blue-900/20 border border-blue-800 rounded-lg p-3"
+            role="status"
+            aria-live="polite"
+          >
             <div className="flex items-start space-x-2">
               <Loader2 className="w-4 h-4 text-blue-400 mt-0.5 animate-spin shrink-0" />
               <div>
