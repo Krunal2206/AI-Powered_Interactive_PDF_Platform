@@ -118,14 +118,14 @@ function generatePdfHtml(
   <meta charset="utf-8">
   <title>Chat Export — ${documentTitle}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       max-width: 800px;
       margin: 0 auto;
       padding: 40px 24px;
       color: #1f2937;
       background: white;
+      -webkit-font-smoothing: antialiased;
     }
     h1 { font-size: 24px; color: #111827; margin-bottom: 4px; }
     .subtitle { font-size: 13px; color: #9ca3af; margin-bottom: 32px; }
