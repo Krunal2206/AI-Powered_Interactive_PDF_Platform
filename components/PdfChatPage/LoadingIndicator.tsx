@@ -1,10 +1,13 @@
-"use client";
-
 import { Bot } from "lucide-react";
 
 export const LoadingIndicator = () => {
   return (
-    <div className="flex justify-start">
+    <div
+      className="flex justify-start"
+      role="status"
+      aria-label="AI assistant is thinking"
+    >
+      <span className="sr-only">AI assistant is thinking...</span>
       <div className="bg-slate-800 rounded-2xl px-4 py-3 max-w-[280px]">
         <div className="flex items-center space-x-2">
           <Bot className="w-4 h-4 text-purple-400" />
