@@ -2,9 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { PDFToolbar } from "./PDFToolbar";
-import { PDFDocument } from "./PDFDocument";
 import { Document as DocumentType } from "@/types/upload";
 import { useToast } from "@/hooks/useToast";
+import dynamic from "next/dynamic";
+
+const PDFDocument = dynamic(
+  () => import("./PDFDocument").then((mod) => mod.PDFDocument),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex flex-1 items-center justify-center p-8 text-muted-foreground">
+        Loading PDF Viewer...
+      </div>
+    ),
+  },
+);
 
 interface PDFViewerProps {
   document: DocumentType;
