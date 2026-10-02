@@ -80,7 +80,10 @@ const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
           <ChatHeader />
         </div>
         <div className="pr-3">
-          <ExportChatButton messages={messages} documentTitle={document.title} />
+          <ExportChatButton
+            messages={messages}
+            documentTitle={document.title}
+          />
         </div>
       </div>
 
@@ -91,9 +94,19 @@ const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
       />
 
       <ScrollArea className="flex-1 p-4 h-32">
-        <div className="space-y-4">
+        <div
+          className="space-y-4"
+          role="log"
+          aria-label="Chat message history"
+          aria-live="polite"
+        >
           {isLoadingHistory && messages.length === 0 && (
-            <div className="text-center text-slate-400 py-8">
+            <div
+              className="text-center text-slate-400 py-8"
+              role="status"
+              aria-label="Loading chat history"
+            >
+              <span className="sr-only">Loading chat history...</span>
               <div className="max-w-64 mx-auto space-y-3">
                 <div className="h-4 w-3/4 mx-auto bg-slate-700/50 rounded animate-pulse" />
                 <div className="h-4 w-1/2 mx-auto bg-slate-700/50 rounded animate-pulse" />
