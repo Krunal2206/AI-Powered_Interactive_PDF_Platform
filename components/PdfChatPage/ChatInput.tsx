@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Send, Lock } from "lucide-react";
 
 interface ChatInputProps {
@@ -19,8 +19,13 @@ export const ChatInput = ({
   isLoading,
   disabled = false,
 }: ChatInputProps) => {
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey && !disabled) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (
+      e.key === "Enter" &&
+      !e.shiftKey &&
+      !e.nativeEvent.isComposing &&
+      !disabled
+    ) {
       e.preventDefault();
       onSendMessage();
     }
@@ -30,10 +35,16 @@ export const ChatInput = ({
 
   return (
     <div className="border-t border-slate-800 p-4">
-      <div className="flex items-center space-x-2">
+      <div className="flex items-end space-x-2">
         <div className="flex-1 relative">
-          <Input
+          <Textarea
             id="chat-input"
+            rows={1}
+            aria-label={
+              disabled
+                ? "Chat is disabled until document is processed"
+                : "Ask about this document"
+            }
             placeholder={
               disabled
                 ? "Process the document first to start chatting..."
@@ -42,7 +53,7 @@ export const ChatInput = ({
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            className={`bg-slate-800 border-slate-700 focus:border-purple-500 pr-12 text-white ${
+            className={`bg-slate-800 border-slate-700 focus:border-purple-500 pr-12 text-white min-h-[44px] max-h-32 resize-none py-2.5 leading-normal ${
               disabled ? "opacity-60 cursor-not-allowed" : ""
             }`}
             disabled={isInputDisabled}
@@ -51,7 +62,8 @@ export const ChatInput = ({
             onClick={onSendMessage}
             disabled={!inputMessage.trim() || isInputDisabled}
             size="sm"
-            className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label={disabled ? "Chat disabled" : "Send message"}
+            className="absolute right-1.5 bottom-1.5 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-8 w-8 p-0"
           >
             {disabled ? (
               <Lock className="w-4 h-4" />
