@@ -10,6 +10,7 @@ import { Bot, Copy, Check } from "lucide-react";
 import ReactMarkdown, { type ExtraProps } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatDisplayMessage } from "@/hooks/useChat";
+import Link from "next/link";
 
 type MarkdownElementProps<Tag extends keyof JSX.IntrinsicElements> =
   ComponentPropsWithoutRef<Extract<Tag, ElementType>> & ExtraProps;
@@ -38,9 +39,19 @@ const CodeBlock = ({ inline, children, ...props }: CodeBlockProps) => {
 
 const MarkdownLink = ({
   children,
-  href,
+  href = "",
   ...props
 }: MarkdownElementProps<"a">) => {
+  const isInternal = href.startsWith("/") || href.startsWith("#");
+
+  if (isInternal) {
+    return (
+      <Link href={href} className="text-purple-300 underline" {...props}>
+        {children}
+      </Link>
+    );
+  }
+
   return (
     <a
       href={href}
@@ -131,6 +142,7 @@ export const ChatMessage = ({ message }: { message: ChatDisplayMessage }) => {
             onClick={handleCopy}
             className="absolute top-2 right-2 p-1.5 rounded-md bg-slate-900/60 hover:bg-slate-900 text-slate-400 hover:text-slate-100 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer border border-slate-700/50 flex items-center justify-center"
             title="Copy response"
+            aria-label="Copy response"
           >
             {copied ? (
               <Check className="w-3.5 h-3.5 text-green-400 animate-scale-in" />
@@ -141,9 +153,7 @@ export const ChatMessage = ({ message }: { message: ChatDisplayMessage }) => {
         )}
 
         <div className="flex items-start space-x-2">
-          {!isUser && (
-            <Bot className="w-4 h-4 mt-1 text-purple-400 shrink-0" />
-          )}
+          {!isUser && <Bot className="w-4 h-4 mt-1 text-purple-400 shrink-0" />}
           <div className="flex-1 min-w-0 pr-4">
             {isUser ? (
               // User messages are plain text — no need to parse markdown
@@ -154,7 +164,12 @@ export const ChatMessage = ({ message }: { message: ChatDisplayMessage }) => {
               // AI responses are formatted as Markdown
               <div className="text-sm leading-relaxed prose prose-invert prose-sm max-w-none wrap-break-word">
                 {!isUser && message.content === "" ? (
-                  <span className="flex space-x-1 mt-1">
+                  <span
+                    className="flex space-x-1 mt-1"
+                    role="status"
+                    aria-label="AI is thinking"
+                  >
+                    <span className="sr-only">AI is thinking...</span>
                     <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:0ms]" />
                     <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:150ms]" />
                     <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:300ms]" />
@@ -179,7 +194,10 @@ export const ChatMessage = ({ message }: { message: ChatDisplayMessage }) => {
                 )}
               </div>
             )}
-            <p className="text-xs mt-2 opacity-70">
+            <p
+              suppressHydrationWarning
+              className="text-xs mt-2 opacity-70"
+            >
               {message.timestamp.toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
