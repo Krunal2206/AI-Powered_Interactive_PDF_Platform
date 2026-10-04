@@ -24,6 +24,7 @@ const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
+  const autoProcessStartedFor = useRef<string | null>(null);
 
   const {
     messages,
@@ -43,10 +44,27 @@ const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
   } = usePDFProcessing();
 
   useEffect(() => {
-    if (document?.id) {
-      checkProcessingStatus(document.id);
-    }
-  }, [document?.id, checkProcessingStatus]);
+    const documentId = document?.id;
+    if (!documentId) return;
+
+    // Automatically check processing status when the document ID changes
+    if (autoProcessStartedFor.current === documentId) return;
+    autoProcessStartedFor.current = documentId;
+
+    void (async () => {
+      const result = await checkProcessingStatus(documentId);
+
+      if (
+        result &&
+        !result.processed &&
+        result.status !== "processing" &&
+        result.status !== "error"
+      ) {
+        // If the document is not processed and not currently processing, start processing it
+        await processDocument(documentId);
+      }
+    })();
+  }, [document?.id, checkProcessingStatus, processDocument]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
