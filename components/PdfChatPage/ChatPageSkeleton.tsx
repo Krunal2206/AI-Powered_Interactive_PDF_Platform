@@ -2,7 +2,12 @@ import { Skeleton } from "../DashboardPage/Skeleton";
 
 export const ChatPageSkeleton = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950">
+    <div
+      className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950"
+      role="status"
+      aria-label="Loading document chat"
+    >
+      <span className="sr-only">Loading document chat...</span>
       <div className="bg-slate-900/50 backdrop-blur-sm border-b border-slate-800 p-2 sm:p-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-2 sm:space-x-4">

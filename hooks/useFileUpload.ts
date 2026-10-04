@@ -122,8 +122,6 @@ export const useFileUpload = () => {
             bytes: result.bytes,
           },
         });
-
-        console.log("Upload successful:", result);
       } catch (error) {
         updateFileStatus(fileId, "error", {
           errorMessage:
