@@ -20,8 +20,24 @@ const ContactForm = () => {
     setIsSubmitting(true);
 
     try {
-      // To Do: Implement actual form submission logic here (e.g., send data to an API endpoint)
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          message: message.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        const errorMessage =
+          data?.error ?? "Failed to send message. Please try again.";
+        throw new Error(errorMessage);
+      }
 
       toast.success("Message sent! We’ll get back to you soon.");
       setName("");
@@ -50,6 +66,7 @@ const ContactForm = () => {
           value={name}
           onChange={(event) => setName(event.target.value)}
           required
+          maxLength={100}
           className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:ring-purple-500/20"
         />
       </div>
@@ -65,6 +82,7 @@ const ContactForm = () => {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           required
+          maxLength={254}
           className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:ring-purple-500/20"
         />
       </div>
@@ -79,6 +97,7 @@ const ContactForm = () => {
           onChange={(event) => setMessage(event.target.value)}
           rows={5}
           required
+          maxLength={5000}
           className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:ring-purple-500/20 resize-none"
         />
       </div>
