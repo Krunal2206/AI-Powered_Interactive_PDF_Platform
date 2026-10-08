@@ -6,9 +6,9 @@ import {
   createProcessingStatus,
   updateProcessingStatus,
   deleteDocumentChunks,
-  isDocumentProcessed,
   generateMissingEmbeddings,
   getProcessingStats,
+  isDocumentProcessed,
 } from "@/lib/firebaseChunkOps";
 import { applyRateLimit, processLimiter } from "@/lib/rateLimit";
 import { authorizeDocumentAccess, handleChatError } from "@/lib/errorHandling";
@@ -16,11 +16,8 @@ import { authorizeDocumentAccess, handleChatError } from "@/lib/errorHandling";
 type RouteParams = {
   params: Promise<{ id: string }>;
 };
-  
-export async function POST(
-  request: NextRequest,
-  { params }: RouteParams,
-) {
+
+export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: documentId } = await params;
     const auth = await authorizeDocumentAccess(documentId);
@@ -32,11 +29,9 @@ export async function POST(
 
     const alreadyProcessed = await isDocumentProcessed(documentId);
     if (alreadyProcessed) {
-      const stats = await getProcessingStats(documentId);
       return NextResponse.json({
         message: "Document already processed",
         processed: true,
-        stats,
       });
     }
 
@@ -120,24 +115,18 @@ export async function POST(
   }
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: RouteParams,
-) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: documentId } = await params;
     const auth = await authorizeDocumentAccess(documentId);
     if (auth.error) return auth.error;
     const { document } = auth;
 
-    const [processed, stats] = await Promise.all([
-      isDocumentProcessed(documentId),
-      getProcessingStats(documentId),
-    ]);
+    const stats = await getProcessingStats(documentId);
 
     return NextResponse.json({
       documentId,
-      processed,
+      processed: stats?.processed ?? false,
       status: document.status,
       stats,
     });
@@ -146,10 +135,7 @@ export async function GET(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: RouteParams,
-) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: documentId } = await params;
     const auth = await authorizeDocumentAccess(documentId);
@@ -167,10 +153,7 @@ export async function DELETE(
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: RouteParams,
-) {
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: documentId } = await params;
     const auth = await authorizeDocumentAccess(documentId);
