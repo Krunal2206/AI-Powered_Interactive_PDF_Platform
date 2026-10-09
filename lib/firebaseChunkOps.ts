@@ -16,10 +16,12 @@ import {
   where,
   writeBatch,
   updateDoc,
+  getCountFromServer,
 } from "firebase/firestore";
 
 const CHUNKS_COLLECTION = "pdf-chunks";
 const PROCESSING_STATUS_COLLECTION = "processing-status";
+const MIN_EMBEDDED_RATIO = 0.7; // Minimum ratio of chunks that must have embeddings for a document to be considered "processed" to avoid blocking users from chatting due to a few failed embeddings.
 
 export interface ProcessingStatus {
   id?: string;
@@ -117,7 +119,7 @@ async function saveChunks(chunks: PDFChunk[]): Promise<void> {
     const slice = chunks.slice(i, i + BATCH_LIMIT);
 
     for (const chunk of slice) {
-      const chunkDoc = doc(chunksCollection);
+      const chunkDoc = doc(chunksCollection, chunk.id);
       batch.set(chunkDoc, {
         ...chunk,
         createdAt: Timestamp.now(),
@@ -454,6 +456,33 @@ export async function getProcessingStatus(
   }
 }
 
+async function countChunks(
+  documentId: string,
+  onlyEmbedded: boolean,
+): Promise<number> {
+  const chunksRef = collection(db, CHUNKS_COLLECTION);
+  const documentFilter = where("metadata.documentId", "==", documentId);
+
+  const q = onlyEmbedded
+    ? query(chunksRef, documentFilter, where("hasEmbedding", "==", true))
+    : query(chunksRef, documentFilter);
+
+  const snapshot = await getCountFromServer(q);
+  return snapshot.data().count;
+}
+
+function summarizeChunks(totalChunks: number, chunksWithEmbeddings: number) {
+  const hasChunks = totalChunks > 0;
+
+  return {
+    totalChunks,
+    chunksWithEmbeddings,
+    hasChunks,
+    processed: hasChunks && chunksWithEmbeddings / totalChunks >= MIN_EMBEDDED_RATIO,
+    fullyEmbedded: hasChunks && chunksWithEmbeddings === totalChunks,
+  };
+}
+
 /**
  * Check if document has been processed and has embeddings
  */
@@ -461,47 +490,36 @@ export async function isDocumentProcessed(
   documentId: string,
 ): Promise<boolean> {
   try {
-    const chunks = await getDocumentChunks(documentId);
-    if (chunks.length === 0) return false;
-
-    // Document is considered processed if at least 50% of its chunks have
-    // embeddings.  Requiring every() is too strict — a single failed
-    // embedding would block the user from chatting entirely.
-    const withEmbeddings = chunks.filter((chunk) => chunk.hasEmbedding).length;
-    const ratio = withEmbeddings / chunks.length;
-    return ratio >= 0.5;
+    const [totalChunks, chunksWithEmbeddings] = await Promise.all([
+      countChunks(documentId, false),
+      countChunks(documentId, true),
+    ]);
+    return summarizeChunks(totalChunks, chunksWithEmbeddings).processed;
   } catch (error) {
     console.error("Error checking if document is processed:", error);
     return false;
   }
 }
 
+export type DocumentProcessingSummary = ReturnType<typeof summarizeChunks> & {
+  lastProcessed?: Date;
+};
+
 /**
  * Get processing statistics for a document
  */
-export async function getProcessingStats(documentId: string): Promise<{
-  totalChunks: number;
-  chunksWithEmbeddings: number;
-  processed: boolean;
-  lastProcessed?: Date;
-  embeddingsReady: boolean;
-} | null> {
+export async function getProcessingStats(
+  documentId: string,
+): Promise<DocumentProcessingSummary | null> {
   try {
-    const [chunks, status] = await Promise.all([
-      getDocumentChunks(documentId),
+    const [totalChunks, chunksWithEmbeddings, status] = await Promise.all([
+      countChunks(documentId, false),
+      countChunks(documentId, true),
       getProcessingStatus(documentId),
     ]);
 
-    const chunksWithEmbeddings = chunks.filter(
-      (chunk) => chunk.hasEmbedding,
-    ).length;
-
     return {
-      totalChunks: chunks.length,
-      chunksWithEmbeddings,
-      processed: chunks.length > 0,
-      embeddingsReady:
-        chunks.length > 0 && chunksWithEmbeddings === chunks.length,
+      ...summarizeChunks(totalChunks, chunksWithEmbeddings),
       lastProcessed: status?.completedAt,
     };
   } catch (error) {
