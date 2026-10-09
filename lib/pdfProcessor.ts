@@ -1,7 +1,6 @@
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
-
-// Import pdf-parse statically - the dynamic import was causing issues
-import pdfParse from "pdf-parse";
+import { PDFParse } from "pdf-parse";
+import { Document } from "@langchain/core/documents";
 
 export interface PDFChunk {
   id: string;
@@ -13,8 +12,6 @@ export interface PDFChunk {
     fileName: string;
     totalPages: number;
     chunkSize: number;
-    startCharIndex: number;
-    endCharIndex: number;
   };
 }
 
@@ -41,10 +38,10 @@ export class PDFProcessor {
       separators: options.separators || [
         "\n\n",
         "\n",
-        ".",
-        "!",
-        "?",
-        ";",
+        ". ",
+        "! ",
+        "? ",
+        "; ",
         " ",
         "",
       ],
@@ -57,7 +54,7 @@ export class PDFProcessor {
   async extractTextFromBuffer(
     pdfBuffer: Buffer,
     documentId: string,
-    fileName: string
+    fileName: string,
   ): Promise<PDFProcessingResult> {
     const startTime = Date.now();
 
@@ -74,35 +71,64 @@ export class PDFProcessor {
       }
 
       // Parse PDF using pdf-parse
-      const pdfData = await pdfParse(pdfBuffer);
+      const pdfParser = new PDFParse({
+        data: new Uint8Array(pdfBuffer),
+      });
 
-      const fullText = pdfData.text;
-      const totalPages = pdfData.numpages;
+      // Langchain creates a document for each page
+      let pageDocs: Document[];
+      let totalPages: number;
 
-      if (!fullText || fullText.trim().length === 0) {
+      try {
+        const { pages, total } = await pdfParser.getText();
+        totalPages = total;
+        pageDocs = pages
+          .filter((page) => page.text.trim().length > 0)
+          .map(
+            (page) =>
+              new Document({
+                pageContent: page.text,
+                metadata: { pageNumber: page.num },
+              }),
+          );
+      } finally {
+        await pdfParser.destroy();
+      }
+
+      if (pageDocs.length === 0) {
         throw new Error(
-          "No text content found in PDF. This might be a scanned PDF that requires OCR."
+          "No text content found in PDF. This might be a scanned PDF that requires OCR.",
         );
       }
 
+      const totalCharacters = pageDocs.reduce(
+        (sum, d) => sum + d.pageContent.length,
+        0,
+      );
+
       // Split text into chunks
-      const textChunks = await this.textSplitter.splitText(fullText);
+      const splitDocs = await this.textSplitter.splitDocuments(pageDocs);
 
       // Create PDFChunk objects with metadata
-      const chunks: PDFChunk[] = this.createChunksWithMetadata(
-        textChunks,
-        fullText,
-        documentId,
-        fileName,
-        totalPages
-      );
+      const chunks: PDFChunk[] = splitDocs.map((doc, index) => ({
+        id: `${documentId}-chunk-${index}`,
+        text: doc.pageContent.trim(),
+        pageNumber: doc.metadata.pageNumber as number,
+        chunkIndex: index,
+        metadata: {
+          documentId,
+          fileName,
+          totalPages,
+          chunkSize: doc.pageContent.length,
+        },
+      }));
 
       const processingTime = Date.now() - startTime;
 
       return {
         chunks,
         totalPages,
-        totalCharacters: fullText.length,
+        totalCharacters,
         processingTime,
       };
     } catch (error) {
@@ -134,17 +160,27 @@ export class PDFProcessor {
   async extractTextFromUrl(
     pdfUrl: string,
     documentId: string,
-    fileName: string
+    fileName: string,
   ): Promise<PDFProcessingResult> {
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    let buffer: Buffer;
+
     try {
-      // Validate URL
-      if (!pdfUrl?.startsWith("http")) {
+      let parsedPdfUrl: URL;
+      try {
+        parsedPdfUrl = new URL(pdfUrl);
+      } catch {
         throw new Error("Invalid PDF URL provided");
       }
 
-      // Fetch with timeout and proper headers
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      if (
+        parsedPdfUrl.protocol !== "https:" ||
+        parsedPdfUrl.hostname !== "res.cloudinary.com"
+      ) {
+        throw new Error("Invalid PDF URL provided");
+      }
 
       const response = await fetch(pdfUrl, {
         method: "GET",
@@ -155,22 +191,8 @@ export class PDFProcessor {
         signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
-
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch PDF: ${response.status} ${response.statusText}`
-        );
-      }
-
-      // Check content type
-      const contentType = response.headers.get("content-type");
-      if (
-        contentType &&
-        !contentType.includes("pdf") &&
-        !contentType.includes("application/octet-stream")
-      ) {
-        console.warn(`Unexpected content type: ${contentType}`);
+        throw new Error(`PDF download failed with status ${response.status}`);
       }
 
       // Get the PDF data
@@ -180,10 +202,7 @@ export class PDFProcessor {
         throw new Error("Downloaded PDF is empty");
       }
 
-      const buffer = Buffer.from(arrayBuffer);
-
-      // Process the downloaded PDF
-      return this.extractTextFromBuffer(buffer, documentId, fileName);
+      buffer = Buffer.from(arrayBuffer);
     } catch (error) {
       console.error("Error fetching PDF from URL:", error);
 
@@ -193,74 +212,83 @@ export class PDFProcessor {
         if (error.name === "AbortError") {
           errorMessage =
             "PDF download timed out (file too large or slow connection)";
-        } else if (error.message.includes("fetch")) {
+        } else if (
+          error.message.startsWith("Invalid PDF URL") ||
+          error.message.startsWith("PDF download failed") ||
+          error.message.includes("too large") ||
+          error.message.includes("empty")
+        ) {
+          errorMessage = error.message;
+        } else if (error instanceof TypeError) {
           errorMessage = "Network error while downloading PDF";
-        } else if (error.message.includes("Invalid PDF URL")) {
-          errorMessage = "Invalid PDF URL provided";
         } else {
           errorMessage = `PDF download error: ${error.message}`;
         }
       }
 
       throw new Error(errorMessage);
+    } finally {
+      clearTimeout(timeoutId);
     }
+
+    return this.extractTextFromBuffer(buffer, documentId, fileName);
   }
 
   /**
    * Create chunks with metadata and estimated page numbers
    */
-  private createChunksWithMetadata(
-    textChunks: string[],
-    fullText: string,
-    documentId: string,
-    fileName: string,
-    totalPages: number
-  ): PDFChunk[] {
-    const chunks: PDFChunk[] = [];
-    let currentCharIndex = 0;
+  // private createChunksWithMetadata(
+  //   textChunks: string[],
+  //   fullText: string,
+  //   documentId: string,
+  //   fileName: string,
+  //   totalPages: number,
+  // ): PDFChunk[] {
+  //   const chunks: PDFChunk[] = [];
+  //   let currentCharIndex = 0;
 
-    for (let i = 0; i < textChunks.length; i++) {
-      const chunkText = textChunks[i];
+  //   for (let i = 0; i < textChunks.length; i++) {
+  //     const chunkText = textChunks[i];
 
-      // Find the actual position of this chunk in the full text
-      const startCharIndex = fullText.indexOf(chunkText, currentCharIndex);
-      const endCharIndex =
-        startCharIndex >= 0
-          ? startCharIndex + chunkText.length
-          : currentCharIndex + chunkText.length;
+  //     // Find the actual position of this chunk in the full text
+  //     const startCharIndex = fullText.indexOf(chunkText, currentCharIndex);
+  //     const endCharIndex =
+  //       startCharIndex >= 0
+  //         ? startCharIndex + chunkText.length
+  //         : currentCharIndex + chunkText.length;
 
-      // Estimate page number based on character position
-      const estimatedPage = Math.max(
-        1,
-        Math.ceil(
-          ((startCharIndex >= 0 ? startCharIndex : currentCharIndex) /
-            fullText.length) *
-            totalPages
-        )
-      );
+  //     // Estimate page number based on character position
+  //     const estimatedPage = Math.max(
+  //       1,
+  //       Math.ceil(
+  //         ((startCharIndex >= 0 ? startCharIndex : currentCharIndex) /
+  //           fullText.length) *
+  //           totalPages,
+  //       ),
+  //     );
 
-      chunks.push({
-        id: `${documentId}-chunk-${i}`,
-        text: chunkText.trim(),
-        pageNumber: estimatedPage,
-        chunkIndex: i,
-        metadata: {
-          documentId,
-          fileName,
-          totalPages,
-          chunkSize: chunkText.length,
-          startCharIndex:
-            startCharIndex >= 0 ? startCharIndex : currentCharIndex,
-          endCharIndex: endCharIndex,
-        },
-      });
+  //     chunks.push({
+  //       id: `${documentId}-chunk-${i}`,
+  //       text: chunkText.trim(),
+  //       pageNumber: estimatedPage,
+  //       chunkIndex: i,
+  //       metadata: {
+  //         documentId,
+  //         fileName,
+  //         totalPages,
+  //         chunkSize: chunkText.length,
+  //         startCharIndex:
+  //           startCharIndex >= 0 ? startCharIndex : currentCharIndex,
+  //         endCharIndex: endCharIndex,
+  //       },
+  //     });
 
-      // Update current position for next iteration
-      currentCharIndex = endCharIndex;
-    }
+  //     // Update current position for next iteration
+  //     currentCharIndex = endCharIndex;
+  //   }
 
-    return chunks;
-  }
+  //   return chunks;
+  // }
 
   /**
    * Process document and return processing status with enhanced error handling
@@ -268,7 +296,7 @@ export class PDFProcessor {
   async processDocument(
     documentId: string,
     cloudinaryUrl: string,
-    fileName: string
+    fileName: string,
   ): Promise<{
     success: boolean;
     chunks?: PDFChunk[];
@@ -284,7 +312,7 @@ export class PDFProcessor {
       const result = await this.extractTextFromUrl(
         cloudinaryUrl,
         documentId,
-        fileName
+        fileName,
       );
 
       return {
@@ -318,7 +346,7 @@ export const extractTextFromPDF = async (
   pdfUrl: string,
   documentId: string,
   fileName: string,
-  options?: PDFExtractionOptions
+  options?: PDFExtractionOptions,
 ): Promise<PDFProcessingResult> => {
   const processor = new PDFProcessor(options);
   return processor.extractTextFromUrl(pdfUrl, documentId, fileName);
