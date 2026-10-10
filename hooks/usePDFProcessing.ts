@@ -8,22 +8,31 @@ interface ProcessingStats {
 }
 
 interface ProcessingState {
+  isChecking: boolean;
   isProcessing: boolean;
   isProcessed: boolean;
   error: string | null;
   stats: ProcessingStats | null;
 }
 
+export interface ProcessingStatusResult {
+  processed: boolean;
+  status?: string;
+}
+
 interface UsePDFProcessingReturn {
   processingState: ProcessingState;
   processDocument: (documentId: string) => Promise<void>;
-  checkProcessingStatus: (documentId: string) => Promise<void>;
+  checkProcessingStatus: (
+    documentId: string,
+  ) => Promise<ProcessingStatusResult | null>;
   resetProcessingState: () => void;
   reprocessDocument: (documentId: string) => Promise<void>;
 }
 
 export const usePDFProcessing = (): UsePDFProcessingReturn => {
   const [processingState, setProcessingState] = useState<ProcessingState>({
+    isChecking: true,
     isProcessing: false,
     isProcessed: false,
     error: null,
@@ -32,6 +41,7 @@ export const usePDFProcessing = (): UsePDFProcessingReturn => {
 
   const resetProcessingState = useCallback(() => {
     setProcessingState({
+      isChecking: false,
       isProcessing: false,
       isProcessed: false,
       error: null,
@@ -39,31 +49,41 @@ export const usePDFProcessing = (): UsePDFProcessingReturn => {
     });
   }, []);
 
-  const checkProcessingStatus = useCallback(async (documentId: string) => {
-    try {
-      const response = await fetch(`/api/documents/${documentId}/process`);
-      const data = await response.json();
+  const checkProcessingStatus = useCallback(
+    async (documentId: string): Promise<ProcessingStatusResult | null> => {
+      try {
+        const response = await fetch(`/api/documents/${documentId}/process`);
+        const data = await response.json();
 
-      if (response.ok) {
+        if (response.ok) {
+          setProcessingState((prev) => ({
+            ...prev,
+            isChecking: false,
+            isProcessed: data.processed,
+            error: null,
+          }));
+          return { processed: data.processed, status: data.status };
+        }
+
         setProcessingState((prev) => ({
           ...prev,
-          isProcessed: data.processed,
-          error: null,
-        }));
-      } else {
-        setProcessingState((prev) => ({
-          ...prev,
+          isChecking: false,
           error: data.error || "Failed to check processing status",
         }));
+
+        return null;
+      } catch (error) {
+        console.error("Error checking processing status:", error);
+        setProcessingState((prev) => ({
+          ...prev,
+          isChecking: false,
+          error: "Network error while checking status",
+        }));
+        return null;
       }
-    } catch (error) {
-      console.error("Error checking processing status:", error);
-      setProcessingState((prev) => ({
-        ...prev,
-        error: "Network error while checking status",
-      }));
-    }
-  }, []);
+    },
+    [],
+  );
 
   const processDocument = useCallback(async (documentId: string) => {
     setProcessingState((prev) => ({
@@ -84,6 +104,7 @@ export const usePDFProcessing = (): UsePDFProcessingReturn => {
 
       if (response.ok) {
         setProcessingState({
+          isChecking: false,
           isProcessing: false,
           isProcessed: true,
           error: null,
@@ -91,6 +112,7 @@ export const usePDFProcessing = (): UsePDFProcessingReturn => {
         });
       } else {
         setProcessingState({
+          isChecking: false,
           isProcessing: false,
           isProcessed: false,
           error: data.error || "Failed to process document",
@@ -100,6 +122,7 @@ export const usePDFProcessing = (): UsePDFProcessingReturn => {
     } catch (error) {
       console.error("Error processing document:", error);
       setProcessingState({
+        isChecking: false,
         isProcessing: false,
         isProcessed: false,
         error: "Network error during processing",
@@ -116,7 +139,7 @@ export const usePDFProcessing = (): UsePDFProcessingReturn => {
           `/api/documents/${documentId}/process`,
           {
             method: "DELETE",
-          }
+          },
         );
 
         if (deleteResponse.ok) {
@@ -137,7 +160,7 @@ export const usePDFProcessing = (): UsePDFProcessingReturn => {
         }));
       }
     },
-    [processDocument]
+    [processDocument],
   );
 
   return {
