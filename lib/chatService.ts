@@ -6,6 +6,7 @@ import {
   getChatHistory,
 } from "./firebaseChatOps";
 import { ChatMessage } from "@/types/chat";
+import { serverEnv } from "./env";
 
 interface RelevantDocument {
   pageContent: string;
@@ -29,7 +30,7 @@ export class ChatService {
   public sessionId?: string;
 
   constructor(documentId: string, userId: string, sessionId?: string) {
-    this.model = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
+    this.model = new GoogleGenerativeAI(serverEnv.GOOGLE_API_KEY);
     this.documentId = documentId;
     this.userId = userId;
     this.sessionId = sessionId;
@@ -86,14 +87,32 @@ export class ChatService {
       context,
     ).replace("{question}", prompt);
 
+    const generationStart = performance.now();
     const result = await chat.sendMessageStream([{ text: formattedPrompt }]);
 
     let fullText = "";
+    let firstToken = true;
     for await (const chunk of result.stream) {
         const token = typeof chunk.text === "function" ? chunk.text() : chunk.text;
+
+        if (firstToken) {
+          const firstTokenTime = performance.now() - generationStart;
+
+          console.log(
+            `[PERF] First Gemini token: ${firstTokenTime.toFixed(2)} ms`,
+          );
+
+          firstToken = false;
+        }
+
         fullText += token;
         onToken(token);
     }
+
+    console.log(
+      `[PERF] Total Gemini stream: ${(performance.now() - generationStart).toFixed(2)} ms`,
+    );
+    
     return fullText;
   }
 
@@ -102,27 +121,58 @@ export class ChatService {
     onToken: (token: string) => void,
   ): Promise<string> {
     try {
+      const sessionStart = performance.now();
+
       // Get or create session
       if (!this.sessionId) {
         this.sessionId = await createChatSession(this.userId, this.documentId);
       }
 
-      // Store user message
-      await addChatMessage(this.sessionId, message, "user");
+      console.log(
+        `[PERF] Create/get session: ${(performance.now() - sessionStart).toFixed(2)} ms`,
+      );
 
+      const saveUserMessageStart = performance.now();
+      // Store user message
+      await addChatMessage(this.sessionId, message, "user", this.documentId);
+
+      console.log(
+        `[PERF] Save user message: ${(performance.now() - saveUserMessageStart).toFixed(2)} ms`,
+      );
+
+      const getRelevantDocsStart = performance.now();
       // Get relevant documents
       const relevantDocs = await this.getRelevantDocuments(message);
+
+      console.log(
+        `[PERF] Get relevant docs: ${(performance.now() - getRelevantDocsStart).toFixed(2)} ms`,
+      );
       const context = relevantDocs.map((doc) => doc.pageContent).join("\n\n");
 
+      const historyStart = performance.now();
       // Get chat history
       const fullHistory = await getChatHistory(this.sessionId);
       const history = fullHistory.slice(-20);
 
+      console.log(
+        `[PERF] Get chat history: ${(performance.now() - historyStart).toFixed(2)} ms`,
+      );
+
+      const generateResponseStart = performance.now();
       // Generate response using Gemini
       const response = await this.generateResponse(message, context, history, onToken);
 
+      console.log(
+        `[PERF] Generate response: ${(performance.now() - generateResponseStart).toFixed(2)} ms`,
+      );
+
+      const saveAssistantMessageStart = performance.now();
       // Store assistant message
-      await addChatMessage(this.sessionId, response, "assistant");
+      await addChatMessage(this.sessionId, response, "assistant", this.documentId);
+
+      console.log(
+        `[PERF] Save assistant message: ${(performance.now() - saveAssistantMessageStart).toFixed(2)} ms`,
+      );
 
       return response;
     } catch (error) {
