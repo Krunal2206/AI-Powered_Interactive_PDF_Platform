@@ -38,6 +38,7 @@ export const addChatMessage = async (
   sessionId: string,
   content: string,
   role: "user" | "assistant",
+  documentId: string,
   metadata?: ChatMessage["metadata"],
 ) => {
   try {
@@ -59,6 +60,16 @@ export const addChatMessage = async (
       messageCount: increment(1),
       updatedAt: serverTimestamp(),
     });
+
+    if (role == "user") {
+      try {
+        await updateDoc(doc(db, "pdf-documents", documentId), {
+          totalChats: increment(1),
+        });
+      } catch (counterError) {
+        console.error("Error incrementing totalChats:", counterError);
+      }
+    }
 
     return messageDoc.id;
   } catch (error) {
