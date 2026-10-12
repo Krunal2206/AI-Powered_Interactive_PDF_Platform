@@ -25,14 +25,10 @@ export interface Document {
   fileSize: number;
   uploadedAt: Date;
   userId: string;
-  mimeType: string;
   status: "uploading" | "processing" | "ready" | "error";
   thumbnailUrl?: string;
   pageCount?: number;
   description?: string;
-  // Phase 4 additions
-  chatEnabled: boolean;
-  lastChatSession?: string;
   totalChats: number;
   processingMetadata?: {
     totalChunks: number;
@@ -48,12 +44,10 @@ export interface DocumentUploadData {
   cloudinaryUrl: string;
   fileSize: number;
   userId: string;
-  mimeType: string;
   status: "ready";
   thumbnailUrl?: string;
   pageCount?: number;
   description?: string;
-  chatEnabled: boolean;
   totalChats: number;
   processingMetadata?: {
     totalChunks: number;
@@ -68,8 +62,6 @@ export interface DocumentUpdateData {
   status?: Document["status"];
   thumbnailUrl?: string;
   pageCount?: number;
-  chatEnabled?: boolean;
-  lastChatSession?: string;
   totalChats?: number;
   processingMetadata?: {
     totalChunks: number;
