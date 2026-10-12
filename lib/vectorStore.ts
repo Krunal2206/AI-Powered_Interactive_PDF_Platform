@@ -2,6 +2,7 @@ import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { PineconeStore } from "@langchain/pinecone";
 import { PDFChunk } from "./pdfProcessor";
+import { serverEnv } from "./env";
 
 // Helper function to clean text for embedding
 function cleanText(text: string): string {
@@ -49,8 +50,6 @@ export interface EmbeddingMetadata {
   pageNumber: number;
   chunkIndex: number;
   fileName: string;
-  startCharIndex: number;
-  endCharIndex: number;
   totalPages: number;
 }
 
@@ -63,14 +62,14 @@ export class VectorStoreService {
   constructor() {
     // Initialize Google Generative AI for embeddings.
     this.embeddings = new GoogleGenerativeAIEmbeddings({
-      apiKey: process.env.GOOGLE_API_KEY!,
+      apiKey: serverEnv.GOOGLE_API_KEY,
       modelName: "gemini-embedding-001",
     });
 
     this.pinecone = new Pinecone({
-      apiKey: process.env.PINECONE_API_KEY!,
+      apiKey: serverEnv.PINECONE_API_KEY,
     });
-    this.indexName = process.env.PINECONE_INDEX_NAME || "pdf-chat-embeddings";
+    this.indexName = serverEnv.PINECONE_INDEX_NAME;
   }
 
   private async initializeVectorStore(): Promise<PineconeStore> {
@@ -79,7 +78,9 @@ export class VectorStoreService {
     }
 
     try {
-      const pineconeIndex = this.pinecone.Index(this.indexName).namespace("pdf-documents");
+      const pineconeIndex = this.pinecone
+        .Index(this.indexName)
+        .namespace("pdf-documents");
 
       this.vectorStore = new PineconeStore(this.embeddings, {
         pineconeIndex,
@@ -100,7 +101,11 @@ export class VectorStoreService {
       const cleanedText = cleanText(text).substring(0, 2048); // Limit length
 
       // Generate embedding
+      const embeddingStart = performance.now();
       const embedding = await this.embeddings.embedQuery(cleanedText);
+      console.log(
+        `[PERF] Embedding generated in: ${performance.now() - embeddingStart} ms`,
+      );
 
       // Verify embedding
       if (embedding?.length !== 3072) {
@@ -142,8 +147,6 @@ export class VectorStoreService {
             pageNumber: chunk.pageNumber,
             chunkIndex: chunk.chunkIndex,
             fileName: chunk.metadata.fileName,
-            startCharIndex: chunk.metadata.startCharIndex,
-            endCharIndex: chunk.metadata.endCharIndex,
             totalPages: chunk.metadata.totalPages,
             chunkSize: chunk.metadata.chunkSize,
           } as EmbeddingMetadata,
@@ -158,7 +161,9 @@ export class VectorStoreService {
           }
 
           // If test embedding succeeded, process the batch
-          await vectorStore.addDocuments(documents);
+          await vectorStore.addDocuments(documents, {
+            ids: batchChunks.map((chunk) => chunk.id),
+          });
           storedCount += documents.length;
           // Track only the chunk IDs that were actually stored
           batchChunks.forEach((chunk) => storedChunkIds.push(chunk.id));
@@ -210,10 +215,14 @@ export class VectorStoreService {
         throw new Error("Failed to generate query embedding");
       }
 
+      const searchStart = performance.now();
       const results = await vectorStore.similaritySearchWithScore(
         cleanText(query),
         topK,
         { documentId: documentId },
+      );
+      console.log(
+        `[PERF] Search completed in: ${performance.now() - searchStart} ms`,
       );
 
       const searchResults: VectorSearchResult[] = results
@@ -243,12 +252,14 @@ export class VectorStoreService {
     error?: string;
   }> {
     try {
-      const pineconeIndex = this.pinecone.Index(this.indexName).namespace("pdf-documents");
+      const pineconeIndex = this.pinecone
+        .Index(this.indexName)
+        .namespace("pdf-documents");
 
       const queryResponse = await pineconeIndex.query({
         vector: new Array(3072).fill(0),
         topK: 10000,
-        includeMetadata: true,
+        // includeMetadata: true,
         filter: {
           documentId: { $eq: documentId },
         },
@@ -261,12 +272,19 @@ export class VectorStoreService {
         };
       }
 
-      const vectors = queryResponse.matches.map((match) => match.id);
-      await pineconeIndex.deleteMany({ ids: vectors });
+      const vectorIds = queryResponse.matches.map((match) => match.id);
+
+      // Pinecone allows at most 1000 IDs per delete request
+      const DELETE_BATCH_SIZE = 1000;
+      for (let i = 0; i < vectorIds.length; i += DELETE_BATCH_SIZE) {
+        await pineconeIndex.deleteMany(
+          vectorIds.slice(i, i + DELETE_BATCH_SIZE),
+        );
+      }
 
       return {
         success: true,
-        deleted: vectors.length,
+        deleted: vectorIds.length,
       };
     } catch (error) {
       console.error("Error deleting document embeddings:", error);
