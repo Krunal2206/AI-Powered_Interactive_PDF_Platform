@@ -80,12 +80,10 @@ export async function getUserDocuments(userId: string): Promise<Document[]> {
         fileSize: data.fileSize,
         uploadedAt: convertTimestamp(data.uploadedAt),
         userId: data.userId,
-        mimeType: data.mimeType,
         status: data.status,
         thumbnailUrl: data.thumbnailUrl,
         pageCount: data.pageCount,
         description: data.description,
-        chatEnabled: data.chatEnabled,
         totalChats: data.totalChats,
       };
     });
