@@ -8,10 +8,10 @@ import {
   AlertCircle,
   RotateCcw,
   Loader2,
-  Info,
 } from "lucide-react";
 
 interface ProcessingState {
+  isChecking: boolean;
   isProcessing: boolean;
   isProcessed: boolean;
   error: string | null;
@@ -34,7 +34,7 @@ export const ProcessingStatus = ({
   onProcess,
   onReprocess,
 }: ProcessingStatusProps) => {
-  const { isProcessing, isProcessed, error, stats } = processingState;
+  const { isChecking, isProcessing, isProcessed, error, stats } = processingState;
 
   return (
     <div className="border-b border-slate-800 p-4 bg-slate-900/50">
@@ -49,7 +49,11 @@ export const ProcessingStatus = ({
           </div>
 
           {/* Status Icon */}
-          <div className="flex items-center space-x-2" role="status" aria-live="polite">
+          <div
+            className="flex items-center space-x-2"
+            role="status"
+            aria-live="polite"
+          >
             {isProcessing && (
               <div className="flex items-center space-x-2 text-blue-400">
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -64,7 +68,7 @@ export const ProcessingStatus = ({
               </div>
             )}
 
-            {!isProcessing && !isProcessed && !error && (
+            {!isChecking && !isProcessing && !isProcessed && !error && (
               <div className="flex items-center space-x-2 text-yellow-400">
                 <Clock className="w-4 h-4" />
                 <span className="text-xs">Not processed</span>
@@ -126,17 +130,16 @@ export const ProcessingStatus = ({
         {/* Action Buttons */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            {!isProcessed && !isProcessing && (
+            {!isChecking && !isProcessed && !isProcessing && (
               <Button
                 onClick={onProcess}
                 size="sm"
                 className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white text-xs cursor-pointer"
-                disabled={isProcessing}
               >
-                {isProcessing ? (
+                {error ? (
                   <>
-                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                    Processing...
+                    <RotateCcw className="w-3 h-3 mr-1 animate-spin" />
+                    Try again
                   </>
                 ) : (
                   <>
@@ -159,14 +162,6 @@ export const ProcessingStatus = ({
               </Button>
             )}
           </div>
-
-          {/* Info about processing */}
-          {!isProcessed && !isProcessing && (
-            <div className="flex items-center space-x-1 text-slate-500">
-              <Info className="w-3 h-3" />
-              <span className="text-xs">Required for chat</span>
-            </div>
-          )}
         </div>
 
         {/* Processing Info */}
