@@ -5,6 +5,7 @@ import {
   recordMonthlyUpload,
 } from "@/lib/firebaseops";
 import { uploadLimiter, applyRateLimit } from "@/lib/rateLimit";
+import { serverEnv } from "@/lib/env";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import type { UploadApiResponse } from "cloudinary";
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
             resource_type: "image",
-            folder: process.env.CLOUDINARY_UPLOAD_FOLDER,
+            folder: serverEnv.CLOUDINARY_UPLOAD_FOLDER,
             public_id: `pdf_${Date.now()}`,
             use_filename: true,
             unique_filename: false,
@@ -103,14 +104,16 @@ export async function POST(request: NextRequest) {
         cloudinaryUrl: cloudinaryResult.secure_url,
         fileSize: file.size,
         userId,
-        mimeType: file.type,
         status: "ready",
-        chatEnabled: false,
         totalChats: 0,
-      })
+        ...(cloudinaryResult.pages
+          ? { pageCount: cloudinaryResult.pages }
+          : {}),
+      });
     } catch (error) {
       console.error("Error saving document to Firestore:", error);
       
+      // Cleanup Cloudinary upload
       try {
         await cloudinary.uploader.destroy(cloudinaryResult.public_id, {
           resource_type: "image",
