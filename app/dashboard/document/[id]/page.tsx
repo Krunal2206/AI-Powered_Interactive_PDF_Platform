@@ -255,7 +255,6 @@ const DocumentViewPage = ({ params }: DocumentViewPageProps) => {
                 <Button
                   onClick={() => goToChat(documentId)}
                   className="bg-purple-600 hover:bg-purple-700 text-white justify-start"
-                  disabled={document.status !== "ready"}
                 >
                   <MessageCircle size={16} className="mr-2" />
                   Start Chat
@@ -295,7 +294,6 @@ const DocumentViewPage = ({ params }: DocumentViewPageProps) => {
             <Button
               onClick={() => goToChat(documentId)}
               className="bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
-              disabled={document.status !== "ready"}
             >
               <MessageCircle size={16} className="mr-2" />
               Start Chat
@@ -396,7 +394,6 @@ const DocumentViewPage = ({ params }: DocumentViewPageProps) => {
           <Button
             onClick={() => goToChat(documentId)}
             className="bg-purple-600 hover:bg-purple-700 text-white rounded-full w-14 h-14 shadow-lg hover:shadow-xl transition-all duration-300"
-            disabled={document.status !== "ready"}
           >
             <MessageCircle size={24} />
           </Button>

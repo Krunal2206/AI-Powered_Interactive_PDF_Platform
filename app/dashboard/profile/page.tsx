@@ -125,7 +125,7 @@ export default function ProfilePage() {
     },
     {
       icon: MessageSquare,
-      label: "Total Chats",
+      label: "Questions Asked",
       value: loading ? "—" : stats.totalChats.toString(),
       gradient: "from-amber-500/20 to-orange-500/20",
       iconColor: "text-amber-400",
