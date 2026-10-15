@@ -13,6 +13,10 @@ export async function POST(
   request: NextRequest,
   { params }: RouteParams,
 ) {
+  const requestStart = performance.now();
+
+  console.log("[PERF] Chat request started");
+
   try {
     // Get authenticated user
     const { userId } = await auth();
@@ -20,9 +24,13 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    console.log(`[PERF] User authenticated check completed after: ${performance.now() - requestStart} ms`);
+
     // Apply rate limiting
     const blocked = await applyRateLimit(chatLimiter, userId);
     if (blocked) return blocked;
+
+    console.log(`[PERF] Rate limiting check completed after: ${performance.now() - requestStart} ms`);
 
     // Get document ID and message from request
     const { documentId } = await params;
@@ -49,6 +57,8 @@ export async function POST(
     const docAuth = await authorizeDocumentAccess(documentId);
     if (docAuth.error) return docAuth.error;
 
+    console.log(`[PERF] Document authorization check completed after: ${performance.now() - requestStart} ms`);
+
     // Validate document processing status
     const processed = await isDocumentProcessed(documentId);
     if (!processed) {
@@ -60,6 +70,8 @@ export async function POST(
         { status: 400 },
       );
     }
+
+    console.log(`[PERF] Document processing check completed after: ${performance.now() - requestStart} ms`);
 
     // Create chat service
     const chatService = new ChatService(
@@ -86,6 +98,11 @@ export async function POST(
           controller.error(error);
         } finally {
           controller.close();
+          const requestDuration = performance.now() - requestStart;
+
+          console.log(
+            `[PERF] Chat request completed in ${requestDuration.toFixed(2)} ms`,
+          );
         }
       },
     });

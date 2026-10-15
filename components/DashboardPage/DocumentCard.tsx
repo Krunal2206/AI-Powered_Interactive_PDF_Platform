@@ -125,9 +125,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
       </div>
 
       {/* Card body — bottom 40% */}
-      <div
-        className="absolute inset-x-0 bottom-0 h-[40%] p-3 flex flex-col justify-between"
-      >
+      <div className="absolute inset-x-0 bottom-0 h-[40%] p-3 flex flex-col justify-between">
         <div>
           <h3 className="text-slate-200 font-medium text-sm mb-1 line-clamp-2 group-hover:text-purple-300 transition-colors duration-300">
             {document.title}
@@ -142,6 +140,11 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
         <div className="space-y-0.5">
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500">
+              {document.pageCount
+                ? `${document.pageCount} ${
+                    document.pageCount === 1 ? "Page" : "Pages"
+                  } · `
+                : ""}
               {formatFileSize(document.fileSize)}
             </span>
             <span
