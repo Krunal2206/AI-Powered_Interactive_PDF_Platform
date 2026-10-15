@@ -46,17 +46,17 @@ export const DocumentSearchFilters: React.FC<DocumentSearchFiltersProps> = ({
       </div>
 
       <Select value={sortOption} onValueChange={setSortOption}>
-        <SelectTrigger className="w-full sm:w-52 bg-slate-800/50 border-slate-700 text-slate-300">
+        <SelectTrigger className="w-full sm:w-52 bg-slate-800/50 border-slate-700 text-slate-300 cursor-pointer">
           <ArrowUpDown size={16} className="mr-2 shrink-0" />
           <SelectValue placeholder="Sort by" />
         </SelectTrigger>
         <SelectContent className="bg-slate-800 border-slate-700 text-slate-300">
-          <SelectItem value="newest">Newest First</SelectItem>
-          <SelectItem value="oldest">Oldest First</SelectItem>
-          <SelectItem value="name-asc">Name A → Z</SelectItem>
-          <SelectItem value="name-desc">Name Z → A</SelectItem>
-          <SelectItem value="size-desc">Largest First</SelectItem>
-          <SelectItem value="most-chats">Most Chats</SelectItem>
+          <SelectItem value="newest" className="cursor-pointer">Newest First</SelectItem>
+          <SelectItem value="oldest" className="cursor-pointer">Oldest First</SelectItem>
+          <SelectItem value="name-asc" className="cursor-pointer">Name A → Z</SelectItem>
+          <SelectItem value="name-desc" className="cursor-pointer">Name Z → A</SelectItem>
+          <SelectItem value="size-desc" className="cursor-pointer">Largest First</SelectItem>
+          <SelectItem value="most-chats" className="cursor-pointer">Most Questions</SelectItem>
         </SelectContent>
       </Select>
     </div>
