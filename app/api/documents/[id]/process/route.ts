@@ -57,6 +57,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
       await updateProcessingStatus(statusId, "generating-embeddings");
 
+      const embeddingStart = Date.now();
       const storeResult = await storePDFChunks(result.chunks, true);
       if (!storeResult.success) {
         throw new Error(storeResult.error || "Failed to store document chunks");
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       const finalStats = {
         ...result.stats!,
         embeddingsGenerated: storeResult.embeddingsGenerated,
-        embeddingTime: Date.now() - (result.stats?.processingTime || 0),
+        embeddingTime: Date.now() - embeddingStart,
       };
 
       await updateProcessingStatus(
@@ -86,6 +87,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         embeddings: {
           generated: storeResult.embeddingsGenerated,
           chunksStored: storeResult.chunksStored,
+          chunksEmbedded: storeResult.chunksEmbedded,
+          partial: storeResult.chunksEmbedded < result.chunks.length,
         },
       });
     } catch (processingError) {

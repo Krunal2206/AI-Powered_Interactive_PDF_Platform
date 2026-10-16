@@ -76,6 +76,7 @@ export async function storePDFChunks(
 ): Promise<{
   success: boolean;
   chunksStored: number;
+  chunksEmbedded: number;
   embeddingsGenerated: boolean;
   error?: string;
 }> {
@@ -83,6 +84,7 @@ export async function storePDFChunks(
     return {
       success: true,
       chunksStored: 0,
+      chunksEmbedded: 0,
       embeddingsGenerated: false,
     };
   }
@@ -90,20 +92,35 @@ export async function storePDFChunks(
   try {
     await saveChunks(chunks);
 
-    const embeddingsGenerated = generateEmbeddings
+    const chunksEmbedded = generateEmbeddings
       ? await generateAndMarkEmbeddings(chunks)
-      : false;
+      : 0;
+
+    if (
+      generateEmbeddings &&
+      chunksEmbedded / chunks.length < MIN_EMBEDDED_RATIO
+    ) {
+      return {
+        success: false,
+        chunksStored: chunks.length,
+        chunksEmbedded,
+        embeddingsGenerated: chunksEmbedded > 0,
+        error: `Only ${chunksEmbedded} of ${chunks.length} chunks could be embedded. Please try again.`,
+      };
+    }
 
     return {
       success: true,
       chunksStored: chunks.length,
-      embeddingsGenerated,
+      chunksEmbedded,
+      embeddingsGenerated: chunksEmbedded > 0,
     };
   } catch (error) {
     console.error("Error storing PDF chunks:", error);
     return {
       success: false,
       chunksStored: 0,
+      chunksEmbedded: 0,
       embeddingsGenerated: false,
       error: error instanceof Error ? error.message : "Unknown error",
     };
@@ -133,37 +150,39 @@ async function saveChunks(chunks: PDFChunk[]): Promise<void> {
   }
 }
 
-async function generateAndMarkEmbeddings(chunks: PDFChunk[]): Promise<boolean> {
+async function generateAndMarkEmbeddings(chunks: PDFChunk[]): Promise<number> {
   try {
     const embeddingResult = await storeDocumentEmbeddings(chunks);
-    const embeddingsGenerated = embeddingResult.stored > 0;
 
-    if (!embeddingsGenerated) {
+    if (embeddingResult.storedChunkIds.length === 0) {
       console.warn("Failed to generate embeddings:", embeddingResult.error);
-      return false;
+      return 0;
     }
 
-    if (embeddingResult.storedChunkIds.length > 0) {
-      await markChunksWithEmbeddings(embeddingResult.storedChunkIds);
-      if (embeddingResult.storedChunkIds.length < chunks.length) {
-        console.warn(
-          `Partial embedding: ${chunks.length - embeddingResult.storedChunkIds.length} chunks failed`,
-        );
-      }
+    const markedCount = await markChunksWithEmbeddings(
+      embeddingResult.storedChunkIds,
+    );
+
+    if (markedCount < chunks.length) {
+      console.warn(
+        `Partial embedding: ${chunks.length - markedCount} of ${chunks.length} chunks are not searchable`,
+      );
     }
 
-    return true;
+    return markedCount;
   } catch (error) {
     console.error("Error generating embeddings:", error);
-    return false;
+    return 0;
   }
 }
 
 /**
  * Mark chunks as having embeddings generated
  */
-async function markChunksWithEmbeddings(chunkIds: string[]): Promise<void> {
-  if (chunkIds.length === 0) return;
+async function markChunksWithEmbeddings(chunkIds: string[]): Promise<number> {
+  if (chunkIds.length === 0) return 0;
+
+  let chunksMarked = 0;
 
   try {
     // Fetch only the specific chunks that were successfully embedded
@@ -199,10 +218,13 @@ async function markChunksWithEmbeddings(chunkIds: string[]): Promise<void> {
 
     if (opsInBatch > 0) {
       await currentBatch.commit();
+      chunksMarked += opsInBatch;
     }
   } catch (error) {
     console.error("Error marking chunks with embeddings:", error);
   }
+
+  return chunksMarked;
 }
 
 /**
