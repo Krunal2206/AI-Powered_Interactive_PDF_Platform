@@ -115,7 +115,7 @@ export const usePDFProcessing = (): UsePDFProcessingReturn => {
           isChecking: false,
           isProcessing: false,
           isProcessed: false,
-          error: data.error || "Failed to process document",
+          error: data.details || data.error || "Failed to process document",
           stats: null,
         });
       }

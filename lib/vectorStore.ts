@@ -95,31 +95,6 @@ export class VectorStoreService {
     }
   }
 
-  private async embedText(text: string): Promise<number[] | null> {
-    try {
-      // Clean and prepare text
-      const cleanedText = cleanText(text).substring(0, 2048); // Limit length
-
-      // Generate embedding
-      const embeddingStart = performance.now();
-      const embedding = await this.embeddings.embedQuery(cleanedText);
-      console.log(
-        `[PERF] Embedding generated in: ${performance.now() - embeddingStart} ms`,
-      );
-
-      // Verify embedding
-      if (embedding?.length !== 3072) {
-        console.warn(`Invalid embedding dimension: ${embedding?.length}`);
-        return null;
-      }
-
-      return embedding;
-    } catch (error) {
-      console.error("Error generating embedding:", error);
-      return null;
-    }
-  }
-
   async storeChunkEmbeddings(chunks: PDFChunk[]): Promise<{
     success: boolean;
     stored: number;
@@ -153,14 +128,7 @@ export class VectorStoreService {
         }));
 
         try {
-          // First verify we can generate embeddings
-          const testEmbedding = await this.embedText(documents[0].pageContent);
-          if (!testEmbedding) {
-            console.warn("Failed to generate test embedding, skipping batch");
-            continue;
-          }
-
-          // If test embedding succeeded, process the batch
+          // Process the batch
           await vectorStore.addDocuments(documents, {
             ids: batchChunks.map((chunk) => chunk.id),
           });
@@ -208,12 +176,6 @@ export class VectorStoreService {
     try {
       const { topK = 5, scoreThreshold = 0.3 } = options;
       const vectorStore = await this.initializeVectorStore();
-
-      // First verify we can generate a query embedding
-      const testEmbedding = await this.embedText(query);
-      if (!testEmbedding) {
-        throw new Error("Failed to generate query embedding");
-      }
 
       const searchStart = performance.now();
       const results = await vectorStore.similaritySearchWithScore(
