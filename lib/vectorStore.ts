@@ -98,20 +98,34 @@ export class VectorStoreService {
   async storeChunkEmbeddings(chunks: PDFChunk[]): Promise<{
     success: boolean;
     stored: number;
+    skipped: number;
     storedChunkIds: string[];
     error?: string;
   }> {
     try {
       const vectorStore = await this.initializeVectorStore();
 
+      // Skip chunks already in Pinecone with identical text
+      const alreadyStored = await this.findAlreadyStoredChunkIds(chunks);
+      const chunksToEmbed = chunks.filter(
+        (chunk) => !alreadyStored.has(chunk.id),
+      );
+
+      if (alreadyStored.size > 0) {
+        console.log(
+          `[Embeddings] Skipping ${alreadyStored.size} of ${chunks.length} chunks already stored`,
+        );
+      }
+
       // Process chunks in smaller batches
       const batchSize = 4;
+      const MAX_ATTEMPTS = 3;
       let storedCount = 0;
-      const storedChunkIds: string[] = [];
+      const storedChunkIds: string[] = [...alreadyStored];
 
       // Process chunks in batches
-      for (let i = 0; i < chunks.length; i += batchSize) {
-        const batchChunks = chunks.slice(i, i + batchSize);
+      for (let i = 0; i < chunksToEmbed.length; i += batchSize) {
+        const batchChunks = chunksToEmbed.slice(i, i + batchSize);
 
         // Prepare documents with cleaned text
         const documents = batchChunks.map((chunk) => ({
@@ -127,31 +141,43 @@ export class VectorStoreService {
           } as EmbeddingMetadata,
         }));
 
-        try {
-          // Process the batch
-          await vectorStore.addDocuments(documents, {
-            ids: batchChunks.map((chunk) => chunk.id),
-          });
+        let batchStored = false;
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+          try {
+            // Same IDs on every attempt, so a retry overwrites, never duplicates
+            await vectorStore.addDocuments(documents, {
+              ids: batchChunks.map((chunk) => chunk.id),
+            });
+            batchStored = true;
+            break;
+          } catch (batchError) {
+            console.error(
+              `Error processing batch ${Math.floor(i / batchSize) + 1} (attempt ${attempt}/${MAX_ATTEMPTS}):`,
+              batchError,
+            );
+            if (attempt < MAX_ATTEMPTS) {
+              await new Promise((resolve) =>
+                setTimeout(resolve, attempt * 1000),
+              );
+            }
+          }
+        }
+
+        if (batchStored) {
           storedCount += documents.length;
           // Track only the chunk IDs that were actually stored
           batchChunks.forEach((chunk) => storedChunkIds.push(chunk.id));
+        }
 
-          // Add a small delay between batches
-          if (i + batchSize < chunks.length) {
-            await new Promise((resolve) => setTimeout(resolve, 500));
-          }
-        } catch (batchError) {
-          console.error(
-            `Error processing batch ${Math.floor(i / batchSize) + 1}:`,
-            batchError,
-          );
-          continue; // Continue with next batch even if this one fails
+        if (i + batchSize < chunksToEmbed.length) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
         }
       }
 
       return {
         success: true,
         stored: storedCount,
+        skipped: alreadyStored.size,
         storedChunkIds,
       };
     } catch (error) {
@@ -159,6 +185,7 @@ export class VectorStoreService {
       return {
         success: false,
         stored: 0,
+        skipped: 0,
         storedChunkIds: [],
         error: error instanceof Error ? error.message : "Unknown error",
       };
@@ -256,5 +283,45 @@ export class VectorStoreService {
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
+  }
+
+  private async findAlreadyStoredChunkIds(
+    chunks: PDFChunk[],
+  ): Promise<Set<string>> {
+    const alreadyStored = new Set<string>();
+
+    try {
+      const pineconeIndex = this.pinecone
+        .Index(this.indexName)
+        .namespace("pdf-documents");
+
+      const batchSize = 100;
+
+      for (let i = 0; i < chunks.length; i += batchSize) {
+        const batchChunks = chunks.slice(i, i + batchSize);
+        const chunkIds = await pineconeIndex.fetch(
+          batchChunks.map((chunk) => chunk.id),
+        );
+
+        for (const chunk of batchChunks) {
+          const record = chunkIds.records[chunk.id];
+
+          if (
+            record?.metadata?.content ===
+            cleanText(chunk.text).substring(0, 2048)
+          ) {
+            alreadyStored.add(chunk.id);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(
+        "Could not check existing vectors, embedding all chunks:",
+        error,
+      );
+      alreadyStored.clear();
+    }
+
+    return alreadyStored;
   }
 }
