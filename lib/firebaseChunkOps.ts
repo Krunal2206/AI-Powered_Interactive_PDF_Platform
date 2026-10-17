@@ -8,10 +8,8 @@ import {
   addDoc,
   collection,
   doc,
-  DocumentData,
   getDocs,
   query,
-  QuerySnapshot,
   Timestamp,
   where,
   writeBatch,
@@ -204,6 +202,7 @@ async function markChunksWithEmbeddings(chunkIds: string[]): Promise<number> {
       for (const docSnapshot of querySnapshot.docs) {
         if (opsInBatch >= WRITE_BATCH_LIMIT) {
           await currentBatch.commit();
+          chunksMarked += opsInBatch;
           currentBatch = writeBatch(db);
           opsInBatch = 0;
         }
@@ -225,40 +224,6 @@ async function markChunksWithEmbeddings(chunkIds: string[]): Promise<number> {
   }
 
   return chunksMarked;
-}
-
-/**
- * Get all chunks for a document
- */
-export async function getDocumentChunks(
-  documentId: string,
-): Promise<StoredPDFChunk[]> {
-  try {
-    const q = query(
-      collection(db, CHUNKS_COLLECTION),
-      where("metadata.documentId", "==", documentId),
-    );
-
-    const querySnapshot: QuerySnapshot<DocumentData> = await getDocs(q);
-
-    const chunks = querySnapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        ...data,
-        createdAt: convertTimestamp(data.createdAt),
-        updatedAt: convertTimestamp(data.updatedAt),
-        embeddingGeneratedAt: data.embeddingGeneratedAt
-          ? convertTimestamp(data.embeddingGeneratedAt)
-          : undefined,
-      } as StoredPDFChunk;
-    });
-
-    // Sort by chunkIndex on the client side to avoid needing a composite index
-    return chunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
-  } catch (error) {
-    console.error("Error fetching document chunks:", error);
-    throw new Error("Failed to fetch document chunks");
-  }
 }
 
 /**
@@ -295,66 +260,6 @@ export async function deleteDocumentChunks(documentId: string): Promise<void> {
   } catch (error) {
     console.error("Error deleting document chunks:", error);
     throw new Error("Failed to delete document chunks");
-  }
-}
-
-/**
- * Generate embeddings for existing chunks that don't have them
- */
-export async function generateMissingEmbeddings(documentId: string): Promise<{
-  success: boolean;
-  generated: number;
-  error?: string;
-}> {
-  try {
-    const chunks = await getDocumentChunks(documentId);
-    const chunksWithoutEmbeddings = chunks.filter(
-      (chunk) => !chunk.hasEmbedding,
-    );
-
-    if (chunksWithoutEmbeddings.length === 0) {
-      return {
-        success: true,
-        generated: 0,
-      };
-    }
-
-    // Convert to PDFChunk format for embedding generation
-    const pdfChunks: PDFChunk[] = chunksWithoutEmbeddings.map((chunk) => ({
-      id: chunk.id,
-      text: chunk.text,
-      pageNumber: chunk.pageNumber,
-      chunkIndex: chunk.chunkIndex,
-      metadata: chunk.metadata,
-    }));
-
-    const embeddingResult = await storeDocumentEmbeddings(pdfChunks);
-
-    if (
-      embeddingResult.stored > 0 &&
-      embeddingResult.storedChunkIds.length > 0
-    ) {
-      // Mark only the chunks that were actually stored successfully
-      await markChunksWithEmbeddings(embeddingResult.storedChunkIds);
-
-      return {
-        success: true,
-        generated: embeddingResult.stored,
-      };
-    } else {
-      return {
-        success: false,
-        generated: 0,
-        error: embeddingResult.error,
-      };
-    }
-  } catch (error) {
-    console.error("Error generating missing embeddings:", error);
-    return {
-      success: false,
-      generated: 0,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
   }
 }
 

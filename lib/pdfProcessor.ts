@@ -235,62 +235,6 @@ export class PDFProcessor {
   }
 
   /**
-   * Create chunks with metadata and estimated page numbers
-   */
-  // private createChunksWithMetadata(
-  //   textChunks: string[],
-  //   fullText: string,
-  //   documentId: string,
-  //   fileName: string,
-  //   totalPages: number,
-  // ): PDFChunk[] {
-  //   const chunks: PDFChunk[] = [];
-  //   let currentCharIndex = 0;
-
-  //   for (let i = 0; i < textChunks.length; i++) {
-  //     const chunkText = textChunks[i];
-
-  //     // Find the actual position of this chunk in the full text
-  //     const startCharIndex = fullText.indexOf(chunkText, currentCharIndex);
-  //     const endCharIndex =
-  //       startCharIndex >= 0
-  //         ? startCharIndex + chunkText.length
-  //         : currentCharIndex + chunkText.length;
-
-  //     // Estimate page number based on character position
-  //     const estimatedPage = Math.max(
-  //       1,
-  //       Math.ceil(
-  //         ((startCharIndex >= 0 ? startCharIndex : currentCharIndex) /
-  //           fullText.length) *
-  //           totalPages,
-  //       ),
-  //     );
-
-  //     chunks.push({
-  //       id: `${documentId}-chunk-${i}`,
-  //       text: chunkText.trim(),
-  //       pageNumber: estimatedPage,
-  //       chunkIndex: i,
-  //       metadata: {
-  //         documentId,
-  //         fileName,
-  //         totalPages,
-  //         chunkSize: chunkText.length,
-  //         startCharIndex:
-  //           startCharIndex >= 0 ? startCharIndex : currentCharIndex,
-  //         endCharIndex: endCharIndex,
-  //       },
-  //     });
-
-  //     // Update current position for next iteration
-  //     currentCharIndex = endCharIndex;
-  //   }
-
-  //   return chunks;
-  // }
-
-  /**
    * Process document and return processing status with enhanced error handling
    */
   async processDocument(
