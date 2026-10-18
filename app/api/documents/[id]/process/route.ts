@@ -6,7 +6,6 @@ import {
   createProcessingStatus,
   updateProcessingStatus,
   deleteDocumentChunks,
-  generateMissingEmbeddings,
   getProcessingStats,
   isDocumentProcessed,
 } from "@/lib/firebaseChunkOps";
@@ -151,31 +150,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       success: true,
       message: "Document chunks and embeddings deleted successfully",
     });
-  } catch (error) {
-    return handleChatError(error);
-  }
-}
-
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  try {
-    const { id: documentId } = await params;
-    const auth = await authorizeDocumentAccess(documentId);
-    if (auth.error) return auth.error;
-
-    const result = await generateMissingEmbeddings(documentId);
-
-    if (result.success) {
-      return NextResponse.json({
-        success: true,
-        message: `Generated ${result.generated} missing embeddings`,
-        generated: result.generated,
-      });
-    }
-
-    return NextResponse.json(
-      { error: "Failed to generate embeddings", details: result.error },
-      { status: 500 },
-    );
   } catch (error) {
     return handleChatError(error);
   }
