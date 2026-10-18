@@ -154,8 +154,7 @@ export const ProcessingStatus = ({
               <Button
                 onClick={onReprocess}
                 size="sm"
-                variant="outline"
-                className="border-slate-700 hover:bg-slate-800 text-slate-300 text-xs cursor-pointer"
+                className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white text-xs cursor-pointer"
               >
                 <RotateCcw className="w-3 h-3 mr-1" />
                 Reprocess
