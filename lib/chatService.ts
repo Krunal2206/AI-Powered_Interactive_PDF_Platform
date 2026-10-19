@@ -10,15 +10,19 @@ import { serverEnv } from "./env";
 
 interface RelevantDocument {
   pageContent: string;
+  pageNumber: number;
 }
 
 const SYSTEM_INSTRUCTION = `You are a helpful AI assistant for answering questions about PDF documents.
 Use the provided context to answer the user's questions.
 If you don't know the answer, just say you don't know. DO NOT try to make up an answer.
 If the question is not about the context, politely inform them that you can only answer questions about the document.
-Always format your responses in Markdown.`;
+Always format your responses in Markdown.
 
-const PROMPT_TEMPLATE = `Context: {context}
+IMPORTANT: When your answer uses information from the provided context, you MUST cite the source page(s) using the format [Page N] (e.g. [Page 4], [Page 12]). Place citations inline right after the relevant statement. If multiple pages support a statement, cite each one (e.g. [Page 2] [Page 5]). Only cite pages that actually appear in the provided context.`;
+
+const PROMPT_TEMPLATE = `Context (with source page numbers):
+{context}
 
 Question: {question}`;
 
@@ -49,11 +53,12 @@ export class ChatService {
       const chunks = await this.vectorStore.searchSimilarChunks(
         query,
         this.documentId,
-        { topK: 3 },
+        { topK: 5 },
       );
-      return chunks.map(
-        (chunk) => ({ pageContent: chunk.content }),
-      );
+      return chunks.map((chunk) => ({
+        pageContent: chunk.content,
+        pageNumber: chunk.metadata.pageNumber,
+      }));
     } catch (error) {
       console.error("Error retrieving relevant documents:", error);
       throw error;
@@ -147,7 +152,9 @@ export class ChatService {
       console.log(
         `[PERF] Get relevant docs: ${(performance.now() - getRelevantDocsStart).toFixed(2)} ms`,
       );
-      const context = relevantDocs.map((doc) => doc.pageContent).join("\n\n");
+      const context = relevantDocs
+        .map((doc) => `[Page ${doc.pageNumber}]:\n${doc.pageContent}`)
+        .join("\n\n");
 
       const historyStart = performance.now();
       // Get chat history
