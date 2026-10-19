@@ -11,7 +11,7 @@ import {
   MessageSquare,
   Minimize2,
 } from "lucide-react";
-import { useCallback, useEffect, useState, use } from "react";
+import { useCallback, useEffect, useRef, useState, use } from "react";
 import { Document as DocumentType } from "@/types/upload";
 import { PDFViewer } from "@/components/PdfChatPage/PDFViewer";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -33,6 +33,25 @@ const Page = ({ params }: PageProps) => {
   const [document, setDocument] = useState<DocumentType | null>(null);
   const { isMobile } = useResponsive();
   const [showChat, setShowChat] = useState<boolean | null>(null);
+  const goToPageRef = useRef<((page: number) => void) | null>(null);
+
+  const handleGoToPageReady = useCallback(
+    (goToPage: (page: number) => void) => {
+      goToPageRef.current = goToPage;
+    },
+    [],
+  );
+
+  const handlePageCitation = useCallback(
+    (page: number) => {
+      goToPageRef.current?.(page);
+      // On mobile, close the chat overlay so the user can see the PDF page
+      if (isMobile) {
+        setShowChat(false);
+      }
+    },
+    [isMobile],
+  );
 
   const fetchDocument = useCallback(async () => {
     try {
@@ -191,7 +210,11 @@ const Page = ({ params }: PageProps) => {
       <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] sm:h-[calc(100vh-80px)] relative">
         {document && (
           <>
-            <PDFViewer document={document} isFullscreen={isFullscreen} />
+            <PDFViewer
+              document={document}
+              isFullscreen={isFullscreen}
+              onGoToPage={handleGoToPageReady}
+            />
 
             {chatResolved && isMobile && showChat && (
               <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end">
@@ -208,14 +231,14 @@ const Page = ({ params }: PageProps) => {
                     </Button>
                   </div>
                   <div className="flex-1 overflow-y-auto">
-                    <ChatPanel document={document} isVisible={true} />
+                    <ChatPanel document={document} isVisible={true} onPageCitation={handlePageCitation} />
                   </div>
                 </div>
               </div>
             )}
 
             {chatResolved && !isMobile && !isFullscreen && showChat && (
-              <ChatPanel document={document} isVisible={true} />
+              <ChatPanel document={document} isVisible={true} onPageCitation={handlePageCitation} />
             )}
           </>
         )}
