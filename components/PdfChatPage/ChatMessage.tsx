@@ -2,11 +2,13 @@
 
 import {
   useState,
+  useCallback,
   type ComponentPropsWithoutRef,
   type ElementType,
   type JSX,
+  type ReactNode,
 } from "react";
-import { Bot, Copy, Check } from "lucide-react";
+import { Bot, Copy, Check, FileText } from "lucide-react";
 import ReactMarkdown, { type ExtraProps } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatDisplayMessage } from "@/hooks/useChat";
@@ -77,15 +79,6 @@ const MarkdownOl = ({ children, ...props }: MarkdownElementProps<"ol">) => (
   </ol>
 );
 
-const MarkdownParagraph = ({
-  children,
-  ...props
-}: MarkdownElementProps<"p">) => (
-  <p className="mb-1 last:mb-0" {...props}>
-    {children}
-  </p>
-);
-
 const MarkdownH1 = ({ children, ...props }: MarkdownElementProps<"h1">) => (
   <h1 className="text-base font-bold mt-2 mb-1" {...props}>
     {children}
@@ -113,7 +106,144 @@ const MarkdownStrong = ({
   </strong>
 );
 
-export const ChatMessage = ({ message }: { message: ChatDisplayMessage }) => {
+// ─── Page Citation Badge ──────────────────────────────────────────────────────
+
+const PAGE_CITATION_REGEX = /\[Page\s+(\d+)\]/g;
+
+/**
+ * Splits a text node into interleaved text spans and clickable PageCitationBadge
+ * components for every `[Page N]` occurrence found in the text.
+ */
+function renderWithCitations(
+  text: string,
+  onPageCitation?: (page: number) => void,
+): ReactNode[] {
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  const regex = new RegExp(PAGE_CITATION_REGEX);
+
+  while ((match = regex.exec(text)) !== null) {
+    // Text before the citation
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+
+    const pageNum = parseInt(match[1], 10);
+    parts.push(
+      <PageCitationBadge
+        key={`page-${pageNum}-${match.index}`}
+        page={pageNum}
+        onClick={onPageCitation}
+      />,
+    );
+
+    lastIndex = regex.lastIndex;
+  }
+
+  // Remaining text after the last citation
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts;
+}
+
+const PageCitationBadge = ({
+  page,
+  onClick,
+}: {
+  page: number;
+  onClick?: (page: number) => void;
+}) => {
+  return (
+    <button
+      type="button"
+      onClick={() => onClick?.(page)}
+      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[11px] font-medium
+        bg-purple-500/20 text-purple-300 border border-purple-500/30
+        hover:bg-purple-500/30 hover:text-purple-200 hover:border-purple-400/50
+        transition-all duration-150 cursor-pointer align-baseline
+        focus:outline-none focus:ring-1 focus:ring-purple-400/50 mt-2"
+      title={`Go to page ${page}`}
+      aria-label={`Navigate to page ${page}`}
+    >
+      <FileText className="w-3 h-3" />
+      <span>Page {page}</span>
+    </button>
+  );
+};
+
+// ─── CitationParagraph ────────────────────────────────────────────────────────
+// Wraps the default <p> renderer so that [Page N] patterns inside text nodes
+// are replaced with clickable badges.
+
+const makeCitationParagraph = (onPageCitation?: (page: number) => void) => {
+  const CitationParagraph = ({
+    children,
+    ...props
+  }: MarkdownElementProps<"p">) => (
+    <p className="mb-1 last:mb-0" {...props}>
+      {injectCitations(children, onPageCitation)}
+    </p>
+  );
+  CitationParagraph.displayName = "CitationParagraph";
+  return CitationParagraph;
+};
+
+const makeCitationLi = (onPageCitation?: (page: number) => void) => {
+  const CitationLi = ({
+    children,
+    ...props
+  }: MarkdownElementProps<"li">) => (
+    <li {...props}>{injectCitations(children, onPageCitation)}</li>
+  );
+  CitationLi.displayName = "CitationLi";
+  return CitationLi;
+};
+
+/**
+ * Recursively walk React children. When a raw string contains
+ * `[Page N]`, replace it with interleaved text + badge nodes.
+ */
+function injectCitations(
+  children: ReactNode,
+  onPageCitation?: (page: number) => void,
+): ReactNode {
+  if (typeof children === "string") {
+    if (PAGE_CITATION_REGEX.test(children)) {
+      PAGE_CITATION_REGEX.lastIndex = 0;
+      return <>{renderWithCitations(children, onPageCitation)}</>;
+    }
+    return children;
+  }
+
+  if (Array.isArray(children)) {
+    return children.map((child, i) => {
+      if (typeof child === "string") {
+        if (PAGE_CITATION_REGEX.test(child)) {
+          PAGE_CITATION_REGEX.lastIndex = 0;
+          return (
+            <span key={i}>{renderWithCitations(child, onPageCitation)}</span>
+          );
+        }
+        return child;
+      }
+      return child;
+    });
+  }
+
+  return children;
+}
+
+// ─── ChatMessage Component ────────────────────────────────────────────────────
+
+interface ChatMessageProps {
+  message: ChatDisplayMessage;
+  onPageCitation?: (page: number) => void;
+}
+
+export const ChatMessage = ({ message, onPageCitation }: ChatMessageProps) => {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
 
@@ -126,6 +256,16 @@ export const ChatMessage = ({ message }: { message: ChatDisplayMessage }) => {
       console.error("Failed to copy text: ", err);
     }
   };
+
+  const CitationParagraph = useCallback(
+    () => makeCitationParagraph(onPageCitation),
+    [onPageCitation],
+  )();
+
+  const CitationLi = useCallback(
+    () => makeCitationLi(onPageCitation),
+    [onPageCitation],
+  )();
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -182,7 +322,8 @@ export const ChatMessage = ({ message }: { message: ChatDisplayMessage }) => {
                       a: MarkdownLink,
                       ul: MarkdownUl,
                       ol: MarkdownOl,
-                      p: MarkdownParagraph,
+                      p: CitationParagraph,
+                      li: CitationLi,
                       h1: MarkdownH1,
                       h2: MarkdownH2,
                       h3: MarkdownH3,
