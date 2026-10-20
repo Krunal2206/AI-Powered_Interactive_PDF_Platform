@@ -18,9 +18,10 @@ import { ExportChatButton } from "./ExportChatButton";
 interface ChatPanelProps {
   document: DocumentType;
   isVisible: boolean;
+  onPageCitation?: (page: number) => void;
 }
 
-const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
+const ChatPanelInner = ({ document, isVisible, onPageCitation }: ChatPanelProps) => {
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
@@ -146,7 +147,11 @@ const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
           )}
 
           {messages.map((message) => (
-            <ChatMessage key={message.id} message={message} />
+            <ChatMessage
+              key={message.id}
+              message={message}
+              onPageCitation={onPageCitation}
+            />
           ))}
 
           {isLoading && <LoadingIndicator />}
@@ -180,10 +185,14 @@ const ChatPanelInner = ({ document, isVisible }: ChatPanelProps) => {
   );
 };
 
-export const ChatPanel = ({ document, isVisible }: ChatPanelProps) => {
+export const ChatPanel = ({ document, isVisible, onPageCitation }: ChatPanelProps) => {
   return (
     <InlineErrorBoundary section="Chat">
-      <ChatPanelInner document={document} isVisible={isVisible} />
+      <ChatPanelInner
+        document={document}
+        isVisible={isVisible}
+        onPageCitation={onPageCitation}
+      />
     </InlineErrorBoundary>
   );
 };
