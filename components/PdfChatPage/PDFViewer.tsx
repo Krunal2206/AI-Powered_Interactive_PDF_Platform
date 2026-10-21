@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PDFToolbar } from "./PDFToolbar";
 import { Document as DocumentType } from "@/types/upload";
 import { useToast } from "@/hooks/useToast";
@@ -21,15 +21,29 @@ const PDFDocument = dynamic(
 interface PDFViewerProps {
   document: DocumentType;
   isFullscreen: boolean;
+  onGoToPage?: (goToPage: (page: number) => void) => void;
 }
 
-export const PDFViewer = ({ document, isFullscreen }: PDFViewerProps) => {
+export const PDFViewer = ({ document, isFullscreen, onGoToPage }: PDFViewerProps) => {
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [matchCount, setMatchCount] = useState<number>(0);
   const toast = useToast();
+
+  // Expose goToPage to parent via callback ref pattern
+  const goToPage = useCallback(
+    (page: number) => {
+      const target = Math.max(1, Math.min(page, numPages || page));
+      setPageNumber(target);
+    },
+    [numPages],
+  );
+
+  useEffect(() => {
+    onGoToPage?.(goToPage);
+  }, [onGoToPage, goToPage]);
 
   useEffect(() => {
     if (!searchTerm.trim()) {
