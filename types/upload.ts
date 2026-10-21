@@ -26,7 +26,6 @@ export interface Document {
   uploadedAt: Date;
   userId: string;
   status: "uploading" | "processing" | "ready" | "error";
-  thumbnailUrl?: string;
   pageCount?: number;
   description?: string;
   totalChats: number;
@@ -45,7 +44,6 @@ export interface DocumentUploadData {
   fileSize: number;
   userId: string;
   status: "ready";
-  thumbnailUrl?: string;
   pageCount?: number;
   description?: string;
   totalChats: number;
@@ -60,7 +58,6 @@ export interface DocumentUpdateData {
   title?: string;
   description?: string;
   status?: Document["status"];
-  thumbnailUrl?: string;
   pageCount?: number;
   totalChats?: number;
   processingMetadata?: {

@@ -44,8 +44,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [thumbnailError, setThumbnailError] = useState(false);
 
-  const thumbnailUrl =
-    document.thumbnailUrl || getThumbnailUrl(document.cloudinaryUrl);
+  const thumbnailUrl = getThumbnailUrl(document.cloudinaryUrl);
 
   return (
     <Link

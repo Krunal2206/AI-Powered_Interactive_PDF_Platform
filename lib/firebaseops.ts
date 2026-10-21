@@ -81,7 +81,6 @@ export async function getUserDocuments(userId: string): Promise<Document[]> {
         uploadedAt: convertTimestamp(data.uploadedAt),
         userId: data.userId,
         status: data.status,
-        thumbnailUrl: data.thumbnailUrl,
         pageCount: data.pageCount,
         description: data.description,
         totalChats: data.totalChats,

@@ -5,7 +5,7 @@ import { Document } from "@langchain/core/documents";
 export interface PDFChunk {
   id: string;
   text: string;
-  pageNumber: number; // Estimated page based on position
+  pageNumber: number;
   chunkIndex: number;
   metadata: {
     documentId: string;
