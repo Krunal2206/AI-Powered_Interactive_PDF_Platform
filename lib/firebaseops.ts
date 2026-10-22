@@ -20,6 +20,7 @@ import {
   updateDoc,
   where,
   getCountFromServer,
+  writeBatch,
 } from "firebase/firestore";
 
 const COLLECTION_NAME = "pdf-documents";
@@ -182,27 +183,20 @@ export async function deleteDocument(documentId: string): Promise<void> {
 }
 
 export async function deleteChatData(documentId: string): Promise<void> {
-  const sessionsRef = collection(db, "chat-sessions");
-  const sessionsQuery = query(
-    sessionsRef,
+  const messagesQuery = query(
+    collection(db, "chat-messages"),
     where("documentId", "==", documentId),
   );
-  const sessionsSnapshot = await getDocs(sessionsQuery);
+  const messagesSnapshot = await getDocs(messagesQuery);
 
-  for (const sessionDoc of sessionsSnapshot.docs) {
-    const messagesRef = collection(db, "chat-messages");
-    const messagesQuery = query(
-      messagesRef,
-      where("sessionId", "==", sessionDoc.id),
-    );
-    const messagesSnapshot = await getDocs(messagesQuery);
+  const BATCH_LIMIT = 500;
 
-    const messageDeletes = messagesSnapshot.docs.map((msgDoc) =>
-      deleteDoc(msgDoc.ref),
-    );
-    await Promise.all(messageDeletes);
-
-    await deleteDoc(sessionDoc.ref);
+  for (let i = 0; i < messagesSnapshot.docs.length; i += BATCH_LIMIT) {
+    const batch = writeBatch(db);
+    messagesSnapshot.docs
+      .slice(i, i + BATCH_LIMIT)
+      .forEach((messageDoc) => batch.delete(messageDoc.ref));
+    await batch.commit();
   }
 }
 
