@@ -7,12 +7,9 @@ import { authorizeDocumentAccess, handleChatError } from "@/lib/errorHandling";
 
 type RouteParams = {
   params: Promise<{ documentId: string }>;
-}
+};
 
-export async function POST(
-  request: NextRequest,
-  { params }: RouteParams,
-) {
+export async function POST(request: NextRequest, { params }: RouteParams) {
   const requestStart = performance.now();
 
   console.log("[PERF] Chat request started");
@@ -24,18 +21,22 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log(`[PERF] User authenticated check completed after: ${performance.now() - requestStart} ms`);
+    console.log(
+      `[PERF] User authenticated check completed after: ${performance.now() - requestStart} ms`,
+    );
 
     // Apply rate limiting
     const blocked = await applyRateLimit(chatLimiter, userId);
     if (blocked) return blocked;
 
-    console.log(`[PERF] Rate limiting check completed after: ${performance.now() - requestStart} ms`);
+    console.log(
+      `[PERF] Rate limiting check completed after: ${performance.now() - requestStart} ms`,
+    );
 
     // Get document ID and message from request
     const { documentId } = await params;
     const body = await request.json();
-    const { message, sessionId } = body;
+    const { message } = body;
 
     // Validate message
     if (!message?.trim()) {
@@ -57,7 +58,9 @@ export async function POST(
     const docAuth = await authorizeDocumentAccess(documentId);
     if (docAuth.error) return docAuth.error;
 
-    console.log(`[PERF] Document authorization check completed after: ${performance.now() - requestStart} ms`);
+    console.log(
+      `[PERF] Document authorization check completed after: ${performance.now() - requestStart} ms`,
+    );
 
     // Validate document processing status
     const processed = await isDocumentProcessed(documentId);
@@ -71,14 +74,12 @@ export async function POST(
       );
     }
 
-    console.log(`[PERF] Document processing check completed after: ${performance.now() - requestStart} ms`);
+    console.log(
+      `[PERF] Document processing check completed after: ${performance.now() - requestStart} ms`,
+    );
 
     // Create chat service
-    const chatService = new ChatService(
-      documentId,
-      userId,
-      sessionId || undefined,
-    );
+    const chatService = new ChatService(documentId, userId);
 
     const encoder = new TextEncoder();
 
@@ -89,10 +90,6 @@ export async function POST(
             const chunk = encoder.encode(token);
             controller.enqueue(chunk);
           });
-
-          const currentSessionId = chatService.sessionId ?? sessionId ?? null;
-          const meta = `\n__SESSION__:${currentSessionId}`;
-          controller.enqueue(encoder.encode(meta));
         } catch (error) {
           console.error("Stream error:", error);
           controller.error(error);
