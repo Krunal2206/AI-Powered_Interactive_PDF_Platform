@@ -29,7 +29,6 @@ interface ChatHistoryResponse {
     content: string;
     createdAt?: SerializedTimestamp | string;
   }>;
-  sessionId?: string | null;
 }
 
 export function useChat(documentId: string, userId: string): UseChatReturn {
@@ -37,7 +36,6 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
 
   // Load existing chat history on mount
   useEffect(() => {
@@ -85,7 +83,6 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
 
         if (mounted) {
           setMessages(history);
-          setSessionId(data.sessionId ?? null);
         }
       } catch (err) {
         console.error("Error loading chat history:", err);
@@ -102,13 +99,16 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
     };
   }, [documentId, userId]);
 
-  const postChatMessage = useCallback(async (message: string) => {
-    return fetch(`/api/chat/${documentId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, sessionId }),
-    });
-  }, [documentId, sessionId]);
+  const postChatMessage = useCallback(
+    async (message: string) => {
+      return fetch(`/api/chat/${documentId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+    },
+    [documentId],
+  );
 
   const ensureResponseOk = async (res: Response) => {
     if (res.ok) return;
@@ -124,34 +124,21 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
     setMessages((prev) => [
       ...prev.filter((m) => m.id !== tempId),
       { ...userMessage, id: `user-${Date.now()}` },
-      { id: assistantId, role: "assistant", content: "", timestamp: new Date() },
+      {
+        id: assistantId,
+        role: "assistant",
+        content: "",
+        timestamp: new Date(),
+      },
     ]);
     return assistantId;
   };
 
   const updateAssistantMessage = (assistantId: string, content: string) => {
     setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === assistantId ? { ...msg, content } : msg,
-      ),
+      prev.map((msg) => (msg.id === assistantId ? { ...msg, content } : msg)),
     );
   };
-
-  const appendStreamChunk = useCallback((chunk: string, currentContent: string) => {
-    if (!chunk.includes("__SESSION__:")) {
-      return currentContent + chunk;
-    }
-
-    const [text, meta] = chunk.split("__SESSION__:");
-    const nextContent = text ? currentContent + text : currentContent;
-    const newSessionId = meta.trim();
-
-    if (newSessionId && newSessionId !== "null" && !sessionId) {
-      setSessionId(newSessionId);
-    }
-
-    return nextContent;
-  }, [sessionId]);
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -184,27 +171,28 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
           const { done, value } = await reader.read();
           if (done) break;
 
-          fullContent = appendStreamChunk(
-            decoder.decode(value, { stream: true }),
-            fullContent,
-          );
+          fullContent += decoder.decode(value, { stream: true });
           updateAssistantMessage(assistantId, fullContent);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to send message");
-        setMessages((prev) => prev.filter((m) => m.id !== tempId && (assistantId ? m.id !== assistantId : true)));
+        setMessages((prev) =>
+          prev.filter(
+            (m) =>
+              m.id !== tempId && (assistantId ? m.id !== assistantId : true),
+          ),
+        );
       } finally {
         setIsLoading(false);
       }
     },
-    [appendStreamChunk, isLoading, postChatMessage],
+    [isLoading, postChatMessage],
   );
 
   const clearError = useCallback(() => setError(null), []);
 
   const clearMessages = useCallback(() => {
     setMessages([]);
-    setSessionId(null);
   }, []);
 
   const invalidateHistory = useCallback(async () => {
@@ -219,8 +207,16 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
       console.error("Error invalidating chat history:", err);
     }
     setMessages([]);
-    setSessionId(null);
   }, [documentId]);
 
-  return { messages, isLoading, isLoadingHistory, error, sendMessage, clearError, clearMessages, invalidateHistory };
+  return {
+    messages,
+    isLoading,
+    isLoadingHistory,
+    error,
+    sendMessage,
+    clearError,
+    clearMessages,
+    invalidateHistory,
+  };
 }
