@@ -1,10 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { VectorStoreService } from "./vectorStore";
-import {
-  addChatMessage,
-  createChatSession,
-  getChatHistory,
-} from "./firebaseChatOps";
+import { addChatMessage, getChatHistory } from "./firebaseChatOps";
 import { ChatMessage } from "@/types/chat";
 import { serverEnv } from "./env";
 
@@ -33,18 +29,19 @@ export class ChatService {
   private vectorStore?: VectorStoreService;
   public sessionId?: string;
 
-  constructor(documentId: string, userId: string, sessionId?: string) {
+  constructor(documentId: string, userId: string) {
     this.model = new GoogleGenerativeAI(serverEnv.GOOGLE_API_KEY);
     this.documentId = documentId;
     this.userId = userId;
-    this.sessionId = sessionId;
   }
 
   private async initVectorStore() {
     this.vectorStore ??= new VectorStoreService();
   }
 
-  private async getRelevantDocuments(query: string): Promise<RelevantDocument[]> {
+  private async getRelevantDocuments(
+    query: string,
+  ): Promise<RelevantDocument[]> {
     try {
       await this.initVectorStore();
       if (!this.vectorStore) {
@@ -98,26 +95,27 @@ export class ChatService {
     let fullText = "";
     let firstToken = true;
     for await (const chunk of result.stream) {
-        const token = typeof chunk.text === "function" ? chunk.text() : chunk.text;
+      const token =
+        typeof chunk.text === "function" ? chunk.text() : chunk.text;
 
-        if (firstToken) {
-          const firstTokenTime = performance.now() - generationStart;
+      if (firstToken) {
+        const firstTokenTime = performance.now() - generationStart;
 
-          console.log(
-            `[PERF] First Gemini token: ${firstTokenTime.toFixed(2)} ms`,
-          );
+        console.log(
+          `[PERF] First Gemini token: ${firstTokenTime.toFixed(2)} ms`,
+        );
 
-          firstToken = false;
-        }
+        firstToken = false;
+      }
 
-        fullText += token;
-        onToken(token);
+      fullText += token;
+      onToken(token);
     }
 
     console.log(
       `[PERF] Total Gemini stream: ${(performance.now() - generationStart).toFixed(2)} ms`,
     );
-    
+
     return fullText;
   }
 
@@ -126,20 +124,9 @@ export class ChatService {
     onToken: (token: string) => void,
   ): Promise<string> {
     try {
-      const sessionStart = performance.now();
-
-      // Get or create session
-      if (!this.sessionId) {
-        this.sessionId = await createChatSession(this.userId, this.documentId);
-      }
-
-      console.log(
-        `[PERF] Create/get session: ${(performance.now() - sessionStart).toFixed(2)} ms`,
-      );
-
       const saveUserMessageStart = performance.now();
       // Store user message
-      await addChatMessage(this.sessionId, message, "user", this.documentId);
+      await addChatMessage(this.userId, this.documentId, message, "user");
 
       console.log(
         `[PERF] Save user message: ${(performance.now() - saveUserMessageStart).toFixed(2)} ms`,
@@ -158,7 +145,7 @@ export class ChatService {
 
       const historyStart = performance.now();
       // Get chat history
-      const fullHistory = await getChatHistory(this.sessionId);
+      const fullHistory = await getChatHistory(this.documentId, this.userId);
       const history = fullHistory.slice(-20);
 
       console.log(
@@ -167,7 +154,12 @@ export class ChatService {
 
       const generateResponseStart = performance.now();
       // Generate response using Gemini
-      const response = await this.generateResponse(message, context, history, onToken);
+      const response = await this.generateResponse(
+        message,
+        context,
+        history,
+        onToken,
+      );
 
       console.log(
         `[PERF] Generate response: ${(performance.now() - generateResponseStart).toFixed(2)} ms`,
@@ -175,7 +167,7 @@ export class ChatService {
 
       const saveAssistantMessageStart = performance.now();
       // Store assistant message
-      await addChatMessage(this.sessionId, response, "assistant", this.documentId);
+      await addChatMessage(this.userId, this.documentId, response, "assistant");
 
       console.log(
         `[PERF] Save assistant message: ${(performance.now() - saveAssistantMessageStart).toFixed(2)} ms`,
@@ -190,6 +182,6 @@ export class ChatService {
 
   public async getHistory(): Promise<ChatMessage[]> {
     if (!this.sessionId) return [];
-    return await getChatHistory(this.sessionId);
+    return await getChatHistory(this.documentId, this.userId);
   }
 }
