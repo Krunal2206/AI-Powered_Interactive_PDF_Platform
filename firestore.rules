@@ -55,11 +55,6 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/pdf-documents/$(documentId)).data.userId;
     }
 
-    // Look up the owner of a chat-session by id (indirect ownership).
-    function sessionOwner(sessionId) {
-      return get(/databases/$(database)/documents/chat-sessions/$(sessionId)).data.userId;
-    }
-
     // --- pdf-documents: owned directly via `userId` ------------------------
 
     match /pdf-documents/{documentId} {
@@ -70,25 +65,11 @@ service cloud.firestore {
                     && request.resource.data.userId == resource.data.userId;
     }
 
-    // --- chat-sessions: owned directly via `userId` ------------------------
-
-    match /chat-sessions/{sessionId} {
+    match /chat-messages/{messageId} {
       allow read, delete: if isOwner(resource.data.userId);
       allow create: if isOwner(request.resource.data.userId);
       allow update: if isOwner(resource.data.userId)
                     && request.resource.data.userId == resource.data.userId;
-    }
-
-    // --- chat-messages: no userId; owned via parent chat-session -----------
-    // NOTE: `get()` runs once per evaluated document. For list queries
-    // (`where("sessionId","==",…)`) Firestore evaluates the rule per returned
-    // doc, so this incurs one lookup per message.
-
-    match /chat-messages/{messageId} {
-      allow read, delete: if isOwner(sessionOwner(resource.data.sessionId));
-      allow create: if isOwner(sessionOwner(request.resource.data.sessionId));
-      allow update: if isOwner(sessionOwner(resource.data.sessionId))
-                    && request.resource.data.sessionId == resource.data.sessionId;
     }
 
     // --- pdf-chunks: no userId; owned via parent pdf-document --------------
