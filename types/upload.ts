@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase/firestore";
+
 export interface CloudinaryData {
   public_id: string;
   secure_url: string;
@@ -66,3 +68,12 @@ export interface DocumentUpdateData {
     lastProcessedAt: Date;
   };
 }
+
+export interface UploadUsageEntry {
+  id: string;
+  at: Timestamp;
+  status: "reserved" | "completed";
+  documentId?: string;
+}
+
+export type ReserveResult = { ok: true } | { ok: false; used: number };

@@ -3,6 +3,8 @@ import {
   Document,
   DocumentUpdateData,
   DocumentUploadData,
+  ReserveResult,
+  UploadUsageEntry,
 } from "@/types/upload";
 import {
   addDoc,
@@ -27,6 +29,8 @@ const COLLECTION_NAME = "pdf-documents";
 // One doc per user (keyed by userId) tracking uploads in the current calendar
 // month. Powers the free-tier "10 uploads / month" quota.
 const UPLOAD_USAGE_COLLECTION = "upload-usage";
+const RESERVATION_TTL_MS = 5 * 60 * 1000; // TTL for reservations, after which they are expired
+const TRANSACTION_OPTIONS = { maxAttempts: 10 }; // Concurrent upload retry attempts
 
 function isTimestampLike(value: unknown): value is { toDate: () => Date } {
   return (
@@ -220,6 +224,106 @@ function currentUploadPeriod(): string {
   const year = now.getUTCFullYear();
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
   return `${year}-${month}`;
+}
+
+function readUsage(
+  data: DocumentData | undefined,
+  period: string,
+  nowMillis: number,
+): { count: number; uploads: UploadUsageEntry[] } {
+  if (!data || data.period !== period) return { count: 0, uploads: [] };
+
+  const stored: UploadUsageEntry[] = Array.isArray(data.uploads)
+    ? data.uploads
+    : [];
+
+  const uploads = stored.filter(
+    (entry) =>
+      entry.status === "completed" ||
+      nowMillis - entry.at.toMillis() < RESERVATION_TTL_MS,
+  );
+
+  const expired = stored.length - uploads.length;
+  const storedCount = typeof data.count === "number" ? data.count : 0;
+
+  return {
+    count: Math.max(0, storedCount - expired),
+    uploads,
+  };
+}
+
+export async function reserveUploadSlot(
+  userId: string,
+  reservationId: string,
+  limit: number,
+): Promise<ReserveResult> {
+  const usageRef = doc(db, UPLOAD_USAGE_COLLECTION, userId);
+  const period = currentUploadPeriod();
+
+  return runTransaction<ReserveResult>(
+    db,
+    async (transaction) => {
+      const snapshot = await transaction.get(usageRef);
+      const now = Timestamp.now();
+
+      const { count, uploads } = readUsage(
+        snapshot.data(),
+        period,
+        now.toMillis(),
+      );
+
+      if (count >= limit) return { ok: false, used: count };
+
+      transaction.set(usageRef, {
+        userId,
+        period,
+        uploads: [
+          ...uploads,
+          { id: reservationId, at: now, status: "reserved" },
+        ],
+        count: count + 1,
+        updatedAt: now,
+      });
+      return { ok: true };
+    },
+    TRANSACTION_OPTIONS,
+  );
+}
+
+// Gives the slot back when the upload failed before a document was saved.
+export async function releaseUploadSlot(
+  userId: string,
+  reservationId: string,
+): Promise<void> {
+  const usageRef = doc(db, UPLOAD_USAGE_COLLECTION, userId);
+  const period = currentUploadPeriod();
+
+  await runTransaction(
+    db,
+    async (transaction) => {
+      const snapshot = await transaction.get(usageRef);
+      const now = Timestamp.now();
+      const { count, uploads } = readUsage(
+        snapshot.data(),
+        period,
+        now.toMillis(),
+      );
+
+      const remaining = uploads.filter(
+        (entry) => !(entry.id === reservationId && entry.status === "reserved"),
+      );
+      if (remaining.length === uploads.length) return; // nothing to release
+
+      transaction.set(usageRef, {
+        userId,
+        period,
+        count: Math.max(0, count - 1),
+        uploads: remaining,
+        updatedAt: now,
+      });
+    },
+    TRANSACTION_OPTIONS,
+  );
 }
 
 // How many uploads the user has made in the current calendar month. Reads a
