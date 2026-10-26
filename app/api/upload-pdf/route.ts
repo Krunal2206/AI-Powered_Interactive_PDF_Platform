@@ -3,12 +3,25 @@ import {
   addDocument,
   getMonthlyUploadCount,
   recordMonthlyUpload,
+  releaseUploadSlot,
+  reserveUploadSlot,
 } from "@/lib/firebaseops";
 import { uploadLimiter, applyRateLimit } from "@/lib/rateLimit";
 import { serverEnv } from "@/lib/env";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import type { UploadApiResponse } from "cloudinary";
+import { randomUUID } from "node:crypto";
+
+const MONTHLY_UPLOAD_LIMIT = 10; // Max 10 uploads per user per calendar month
+
+async function releaseQuietly(userId: string, reservationId: string) {
+  try {
+    await releaseUploadSlot(userId, reservationId);
+  } catch (error) {
+    console.error("Error releasing upload slot:", error);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,17 +34,16 @@ export async function POST(request: NextRequest) {
     const blocked = await applyRateLimit(uploadLimiter, userId);
     if (blocked) return blocked;
 
-    const MONTHLY_UPLOAD_LIMIT = 10; // Max 10 uploads per user per calendar month
-    const uploadsThisMonth = await getMonthlyUploadCount(userId);
-    if (uploadsThisMonth >= MONTHLY_UPLOAD_LIMIT) {
-      return NextResponse.json(
-        {
-          error: "Monthly upload limit reached",
-          message: `Free accounts can upload up to ${MONTHLY_UPLOAD_LIMIT} PDFs per month. Your quota resets at the start of next month.`,
-        },
-        { status: 403 },
-      );
-    }
+    // const uploadsThisMonth = await getMonthlyUploadCount(userId);
+    // if (uploadsThisMonth >= MONTHLY_UPLOAD_LIMIT) {
+    //   return NextResponse.json(
+    //     {
+    //       error: "Monthly upload limit reached",
+    //       message: `Free accounts can upload up to ${MONTHLY_UPLOAD_LIMIT} PDFs per month. Your quota resets at the start of next month.`,
+    //     },
+    //     { status: 403 },
+    //   );
+    // }
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -44,7 +56,7 @@ export async function POST(request: NextRequest) {
     if (file.type !== "application/pdf") {
       return NextResponse.json(
         { error: "Only PDF files are allowed" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -52,7 +64,7 @@ export async function POST(request: NextRequest) {
     if (file.size > maxSize) {
       return NextResponse.json(
         { error: "File size exceeds 10MB limit" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -60,7 +72,24 @@ export async function POST(request: NextRequest) {
     if (buffer.subarray(0, 4).toString("ascii") !== "%PDF") {
       return NextResponse.json(
         { error: "The uploaded file is not a valid PDF" },
-        { status: 400 }
+        { status: 400 },
+      );
+    }
+
+    // Check the monthly limit and claim a slot in one transaction, so concurrent uploads can't all pass the check.
+    const reservationId = randomUUID();
+    const reservation = await reserveUploadSlot(
+      userId,
+      reservationId,
+      MONTHLY_UPLOAD_LIMIT,
+    );
+    if (!reservation.ok) {
+      return NextResponse.json(
+        {
+          error: "Monthly upload limit reached",
+          message: `Free accounts can upload up to ${MONTHLY_UPLOAD_LIMIT} PDFs per month. Your quota resets on the 1st of next month (00:00 UTC).`,
+        },
+        { status: 403 },
       );
     }
 
@@ -89,9 +118,10 @@ export async function POST(request: NextRequest) {
       });
     } catch (error) {
       console.error(error);
+      await releaseQuietly(userId, reservationId);
       return NextResponse.json(
         { error: "Failed to upload PDF to Cloudinary" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -112,7 +142,7 @@ export async function POST(request: NextRequest) {
       });
     } catch (error) {
       console.error("Error saving document to Firestore:", error);
-      
+
       // Cleanup Cloudinary upload
       try {
         await cloudinary.uploader.destroy(cloudinaryResult.public_id, {
@@ -122,9 +152,11 @@ export async function POST(request: NextRequest) {
         console.error("Error cleaning up Cloudinary upload:", error);
       }
 
+      await releaseQuietly(userId, reservationId);
+
       return NextResponse.json(
         { error: "Failed to save document data" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -154,7 +186,7 @@ export async function POST(request: NextRequest) {
         error: "Upload failed",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
