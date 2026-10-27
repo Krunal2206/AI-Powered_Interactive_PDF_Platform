@@ -100,6 +100,13 @@ service cloud.firestore {
       allow create, update: if isOwner(userId)
                             && request.resource.data.userId == userId;
       allow delete: if false;
+
+      match /history/{period} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+                      && request.resource.data.userId == userId;
+        allow update, delete: if false ;
+      }
     }
 
     // Deny everything not explicitly matched above.

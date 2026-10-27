@@ -1,8 +1,7 @@
 import cloudinary from "@/cloudinary";
 import {
   addDocument,
-  getMonthlyUploadCount,
-  recordMonthlyUpload,
+  confirmUploadSlot,
   releaseUploadSlot,
   reserveUploadSlot,
 } from "@/lib/firebaseops";
@@ -160,13 +159,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Count this upload against the user's monthly quota. Best-effort: the
-    // document is already stored, so a counter write failure must not fail the
-    // request (it only risks a small undercount, which favors the user).
     try {
-      await recordMonthlyUpload(userId);
+      await confirmUploadSlot(userId, reservationId, documentId);
     } catch (error) {
-      console.error("Error recording monthly upload usage:", error);
+      console.error("Error confirming upload slot:", error);
     }
 
     return NextResponse.json({
