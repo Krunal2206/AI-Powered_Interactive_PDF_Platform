@@ -23,6 +23,7 @@ import {
   where,
   getCountFromServer,
   writeBatch,
+  Transaction,
 } from "firebase/firestore";
 
 const COLLECTION_NAME = "pdf-documents";
@@ -252,6 +253,42 @@ function readUsage(
   };
 }
 
+function archivePreviousPeriod(
+  transaction: Transaction,
+  userId: string,
+  data: DocumentData | undefined,
+  period: string,
+  now: Timestamp,
+): void {
+  if (!data || typeof data.period !== "string" || data.period === period) {
+    return; // same month, or no previous data
+  }
+
+  const stored: UploadUsageEntry[] = Array.isArray(data.uploads)
+    ? data.uploads
+    : [];
+
+  const completed = stored.filter((entry) => entry.status === "completed");
+  const unconfirmed = stored.length - completed.length;
+  const storedCount = typeof data.count === "number" ? data.count : 0;
+  const count = Math.max(0, storedCount - unconfirmed);
+
+  if (count === 0 && completed.length === 0) {
+    return;
+  }
+
+  transaction.set(
+    doc(db, UPLOAD_USAGE_COLLECTION, userId, "history", data.period),
+    {
+      userId,
+      period: data.period,
+      count,
+      uploads: completed,
+      updatedAt: now,
+    },
+  );
+}
+
 export async function reserveUploadSlot(
   userId: string,
   reservationId: string,
@@ -273,6 +310,8 @@ export async function reserveUploadSlot(
       );
 
       if (count >= limit) return { ok: false, used: count };
+
+      archivePreviousPeriod(transaction, userId, snapshot.data(), period, now);
 
       transaction.set(usageRef, {
         userId,
@@ -326,42 +365,58 @@ export async function releaseUploadSlot(
   );
 }
 
-// How many uploads the user has made in the current calendar month. Reads a
-// per-user counter that is only ever incremented (on a successful upload) and
-// reset at each month boundary — deleting a document does NOT free a slot.
-export async function getMonthlyUploadCount(userId: string): Promise<number> {
-  try {
-    const usageRef = doc(db, UPLOAD_USAGE_COLLECTION, userId);
-    const snapshot = await getDoc(usageRef);
-    const data = snapshot.data();
-    // Missing doc, or a counter left over from a previous month, counts as zero.
-    if (data?.period !== currentUploadPeriod()) return 0;
-    return typeof data.count === "number" ? data.count : 0;
-  } catch (error) {
-    console.error("Error reading monthly upload count:", error);
-    throw new Error("Failed to read upload usage");
-  }
-}
-
-// Records one upload against the current calendar month, starting a fresh count
-// when a new month has begun. Runs in a transaction so concurrent uploads don't
-// clobber each other's increment.
-export async function recordMonthlyUpload(userId: string): Promise<void> {
+export async function confirmUploadSlot(
+  userId: string,
+  reservationId: string,
+  documentId: string,
+): Promise<void> {
   const usageRef = doc(db, UPLOAD_USAGE_COLLECTION, userId);
   const period = currentUploadPeriod();
 
-  await runTransaction(db, async (transaction) => {
-    const snapshot = await transaction.get(usageRef);
-    const data = snapshot.data();
-    const samePeriod = data?.period === period;
-    const previousCount =
-      samePeriod && typeof data?.count === "number" ? data.count : 0;
+  await runTransaction(
+    db,
+    async (transaction) => {
+      const snapshot = await transaction.get(usageRef);
+      const now = Timestamp.now();
+      const { count, uploads } = readUsage(
+        snapshot.data(),
+        period,
+        now.toMillis(),
+      );
 
-    transaction.set(usageRef, {
-      userId,
-      period,
-      count: previousCount + 1,
-      updatedAt: Timestamp.now(),
-    });
-  });
+      archivePreviousPeriod(transaction, userId, snapshot.data(), period, now);
+
+      const index = uploads.findIndex((entry) => entry.id === reservationId);
+
+      if (index === -1) {
+        transaction.set(usageRef, {
+          userId,
+          period,
+          count: count + 1,
+          uploads: [
+            ...uploads,
+            { id: reservationId, at: now, status: "completed", documentId },
+          ],
+          updatedAt: now,
+        });
+        return;
+      }
+
+      const updated = [...uploads];
+      updated[index] = {
+        ...updated[index],
+        status: "completed",
+        documentId,
+      };
+
+      transaction.set(usageRef, {
+        userId,
+        period,
+        count,
+        uploads: updated,
+        updatedAt: now,
+      });
+    },
+    TRANSACTION_OPTIONS,
+  );
 }
