@@ -1,10 +1,7 @@
 "use client";
 
-import { startTransition, useEffect } from "react";
-import { AlertTriangle, RefreshCw, ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import ErrorPage from "@/components/ErrorPage";
+import { ArrowLeft } from "lucide-react";
 
 export default function DashboardError({
   error,
@@ -13,62 +10,18 @@ export default function DashboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }>) {
-  const router = useRouter();
-
-  useEffect(() => {
-    console.error("[app/dashboard/error.tsx]", error);
-  }, [error]);
-
-  const handleReset = () => {
-    startTransition(() => {
-      router.refresh();
-      reset();
-    });
-  };
-
   return (
-    <div className="flex flex-col items-center justify-center min-h-75 p-8 text-center">
-      <div className="p-4 rounded-full bg-red-500/10 mb-6">
-        <AlertTriangle className="w-10 h-10 text-red-400" />
-      </div>
-
-      <h2 className="text-xl font-semibold text-slate-200 mb-2">
-        Dashboard ran into a problem
-      </h2>
-
-      <p className="text-slate-400 text-sm mb-2 max-w-md">
-        An unexpected error occurred. You can try refreshing this section or go
-        back to the dashboard.
-      </p>
-
-      {process.env.NODE_ENV === "development" && (
-        <div className="mt-2 mb-6 text-left max-w-lg w-full">
-          <p className="text-xs font-mono text-red-400 bg-red-950/30 border border-red-800/40 rounded-lg p-3 break-words">
-            {error.message}
-          </p>
-        </div>
-      )}
-
-      <div className="flex items-center gap-3 mt-4">
-        <Button
-          onClick={handleReset}
-          className="bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Try again
-        </Button>
-
-        <Button
-          variant="outline"
-          asChild
-          className="border-white/20 hover:bg-white/10 hover:text-white cursor-pointer"
-        >
-          <Link href={"/dashboard"}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to dashboard
-          </Link>
-        </Button>
-      </div>
-    </div>
+    <ErrorPage
+      error={error}
+      reset={reset}
+      title="Dashboard ran into a problem"
+      description="An unexpected error occurred. You can try refreshing this section or go back to the dashboard."
+      sourceTag="[app/dashboard/error.tsx]"
+      minHeightClass="min-h-75"
+      backHref="/dashboard"
+      backLabel="Back to dashboard"
+      backIcon={ArrowLeft}
+    />
   );
 }
+
