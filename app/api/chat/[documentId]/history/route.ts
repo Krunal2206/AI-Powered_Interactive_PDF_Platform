@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getChatHistory } from "@/lib/firebaseChatOps";
 import { deleteChatData } from "@/lib/firebaseops";
-import { authorizeDocumentAccess, handleChatError } from "@/lib/errorHandling";
+import { authorizeDocumentAccess, handleApiError } from "@/lib/errorHandling";
 
 type RouteParams = {
   params: Promise<{ documentId: string }>;
@@ -20,7 +20,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       history,
     });
   } catch (error) {
-    return handleChatError(error);
+    return handleApiError(error);
   }
 }
 
@@ -37,6 +37,6 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       message: "Chat history cleared",
     });
   } catch (error) {
-    return handleChatError(error);
+    return handleApiError(error);
   }
 }

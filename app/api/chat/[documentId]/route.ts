@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { ChatService } from "@/lib/chatService";
 import { isDocumentProcessed } from "@/lib/firebaseChunkOps";
 import { chatLimiter, applyRateLimit } from "@/lib/rateLimit";
-import { authorizeDocumentAccess, handleChatError } from "@/lib/errorHandling";
+import { authorizeDocumentAccess, handleApiError } from "@/lib/errorHandling";
 
 type RouteParams = {
   params: Promise<{ documentId: string }>;
@@ -112,6 +112,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       },
     });
   } catch (error) {
-    return handleChatError(error);
+    return handleApiError(error);
   }
 }
