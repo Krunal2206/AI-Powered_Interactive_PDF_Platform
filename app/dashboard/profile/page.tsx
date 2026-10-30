@@ -2,8 +2,8 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useCallback, useEffect, useState } from "react";
-import { getUserDocuments } from "@/lib/firebaseops";
-import { Document } from "@/types/upload";
+import { getUploadUsage, getUserDocuments } from "@/lib/firebaseops";
+import { Document, UploadUsageSummary } from "@/types/upload";
 import ProfileSkeleton from "@/components/ProfilePage/ProfileSkeleton";
 import DetailRow from "@/components/ProfilePage/DetailRow";
 import {
@@ -20,15 +20,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import UploadQuotaCard from "@/components/ProfilePage/UploadQuotaCard";
+import { MONTHLY_UPLOAD_LIMIT } from "@/constants/upload";
+import { formatFileSize } from "@/lib/upload";
 
-const CLERK_MANAGE_URL = process.env.NEXT_PUBLIC_CLERK_MANAGE_PROFILE_URL || "#";
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
-}
+const CLERK_MANAGE_URL =
+  process.env.NEXT_PUBLIC_CLERK_MANAGE_PROFILE_URL || "#";
 
 function formatDate(date: Date | string): string {
   return new Date(date).toLocaleDateString("en-US", {
@@ -56,12 +53,28 @@ export default function ProfilePage() {
     processedDocuments: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [usage, setUsage] = useState<UploadUsageSummary | null>(null);
+  const [documentTitles, setDocumentTitles] = useState<Record<string, string>>(
+    {},
+  );
 
   const loadStats = useCallback(async () => {
     if (!user?.id) return;
     try {
       setLoading(true);
-      const documents: Document[] = await getUserDocuments(user.id);
+      const [documents, usageSummary]: [Document[], UploadUsageSummary | null] =
+        await Promise.all([
+          getUserDocuments(user.id),
+          getUploadUsage(user.id).catch((error) => {
+            console.error("Error loading upload usage:", error);
+            return null;
+          }),
+        ]);
+
+      setUsage(usageSummary);
+      setDocumentTitles(
+        Object.fromEntries(documents.map((doc) => [doc.id, doc.title])),
+      );
 
       const totalStorage = documents.reduce(
         (sum, doc) => sum + (doc.fileSize || 0),
@@ -119,7 +132,7 @@ export default function ProfilePage() {
     {
       icon: HardDrive,
       label: "Storage Used",
-      value: loading ? "—" : formatBytes(stats.totalStorage),
+      value: loading ? "—" : formatFileSize(stats.totalStorage),
       gradient: "from-emerald-500/20 to-teal-500/20",
       iconColor: "text-emerald-400",
     },
@@ -248,6 +261,13 @@ export default function ProfilePage() {
             ))}
           </div>
         </div>
+
+        <UploadQuotaCard
+          usage={usage}
+          loading={loading}
+          limit={MONTHLY_UPLOAD_LIMIT}
+          documentTitles={documentTitles}
+        />
 
         {/* Account Details */}
         <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-white/10 p-6 sm:p-8">
