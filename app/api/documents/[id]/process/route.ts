@@ -10,7 +10,7 @@ import {
   isDocumentProcessed,
 } from "@/lib/firebaseChunkOps";
 import { applyRateLimit, processLimiter } from "@/lib/rateLimit";
-import { authorizeDocumentAccess, handleChatError } from "@/lib/errorHandling";
+import { authorizeDocumentAccess, handleApiError } from "@/lib/errorHandling";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
   } catch (error) {
-    return handleChatError(error);
+    return handleApiError(error);
   }
 }
 
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       stats,
     });
   } catch (error) {
-    return handleChatError(error);
+    return handleApiError(error);
   }
 }
 
@@ -151,6 +151,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       message: "Document chunks and embeddings deleted successfully",
     });
   } catch (error) {
-    return handleChatError(error);
+    return handleApiError(error);
   }
 }

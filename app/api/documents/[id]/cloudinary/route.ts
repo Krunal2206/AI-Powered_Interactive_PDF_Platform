@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import cloudinary from "@/cloudinary";
-import { authorizeDocumentAccess, handleChatError } from "@/lib/errorHandling";
+import { authorizeDocumentAccess, handleApiError } from "@/lib/errorHandling";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -35,6 +35,6 @@ export async function DELETE(
       result: result.result,
     });
   } catch (error) {
-    return handleChatError(error);
+    return handleApiError(error);
   }
 }
