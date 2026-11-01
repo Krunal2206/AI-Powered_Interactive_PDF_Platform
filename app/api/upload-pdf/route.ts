@@ -11,8 +11,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import type { UploadApiResponse } from "cloudinary";
 import { randomUUID } from "node:crypto";
-
-const MONTHLY_UPLOAD_LIMIT = 10; // Max 10 uploads per user per calendar month
+import { MONTHLY_UPLOAD_LIMIT } from "@/constants/upload";
 
 async function releaseQuietly(userId: string, reservationId: string) {
   try {
@@ -32,17 +31,6 @@ export async function POST(request: NextRequest) {
     // Rate limit: 5 uploads per 10 minutes
     const blocked = await applyRateLimit(uploadLimiter, userId);
     if (blocked) return blocked;
-
-    // const uploadsThisMonth = await getMonthlyUploadCount(userId);
-    // if (uploadsThisMonth >= MONTHLY_UPLOAD_LIMIT) {
-    //   return NextResponse.json(
-    //     {
-    //       error: "Monthly upload limit reached",
-    //       message: `Free accounts can upload up to ${MONTHLY_UPLOAD_LIMIT} PDFs per month. Your quota resets at the start of next month.`,
-    //     },
-    //     { status: 403 },
-    //   );
-    // }
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
