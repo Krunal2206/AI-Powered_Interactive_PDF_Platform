@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { X } from "lucide-react";
 import { UploadedFile } from "../../types/upload";
-import { formatFileSize, getStatusIcon } from "@/lib/upload";
+import { formatFileSize } from "@/lib/upload";
 import { FileProgressBar } from "./FileProgressBar";
 import { StatusBadge } from "./StatusBadge";
+import { StatusIcon } from "./StatusIcon";
 
 interface FileItemProps {
   fileObj: UploadedFile;
@@ -18,7 +19,9 @@ export const FileItem: React.FC<FileItemProps> = ({ fileObj, onRemove }) => {
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 flex-1">
-            <div className="flex-shrink-0">{getStatusIcon(fileObj.status)}</div>
+            <div className="flex-shrink-0">
+              <StatusIcon status={fileObj.status} />
+            </div>
 
             <div className="flex-1 min-w-0">
               <p className="text-slate-300 text-sm font-medium truncate">
