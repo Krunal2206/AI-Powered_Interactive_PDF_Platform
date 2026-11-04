@@ -1,28 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { ChatService } from "@/lib/chatService";
 import { isDocumentProcessed } from "@/lib/firebaseChunkOps";
 import { chatLimiter, applyRateLimit } from "@/lib/rateLimit";
 import { authorizeDocumentAccess, handleApiError } from "@/lib/errorHandling";
+import { DocumentIdParam } from "@/types/api";
 
-type RouteParams = {
-  params: Promise<{ documentId: string }>;
-};
-
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(request: NextRequest, { params }: DocumentIdParam) {
   const requestStart = performance.now();
 
   console.log("[PERF] Chat request started");
 
   try {
-    // Get authenticated user
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Validate document access + authentication
+    const { documentId } = await params;
+    const docAuth = await authorizeDocumentAccess(documentId);
+    if (docAuth.error) return docAuth.error;
+    const { userId } = docAuth;
 
     console.log(
-      `[PERF] User authenticated check completed after: ${performance.now() - requestStart} ms`,
+      `[PERF] Document authorization check completed after: ${performance.now() - requestStart} ms`,
     );
 
     // Apply rate limiting
@@ -33,8 +29,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       `[PERF] Rate limiting check completed after: ${performance.now() - requestStart} ms`,
     );
 
-    // Get document ID and message from request
-    const { documentId } = await params;
+    // Get message from request
     const body = await request.json();
     const { message } = body;
 
@@ -53,14 +48,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 400 },
       );
     }
-
-    // Validate document
-    const docAuth = await authorizeDocumentAccess(documentId);
-    if (docAuth.error) return docAuth.error;
-
-    console.log(
-      `[PERF] Document authorization check completed after: ${performance.now() - requestStart} ms`,
-    );
 
     // Validate document processing status
     const processed = await isDocumentProcessed(documentId);
