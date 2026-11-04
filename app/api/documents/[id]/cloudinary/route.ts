@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import cloudinary from "@/cloudinary";
 import { authorizeDocumentAccess, handleApiError } from "@/lib/errorHandling";
-
-type RouteParams = {
-  params: Promise<{ id: string }>;
-};
+import { IdParam } from "@/types/api";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: RouteParams,
+  { params }: IdParam,
 ) {
   try {
     const { id: documentId } = await params;

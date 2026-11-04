@@ -2,12 +2,9 @@ import { NextResponse } from "next/server";
 import { getChatHistory } from "@/lib/firebaseChatOps";
 import { deleteChatData } from "@/lib/firebaseops";
 import { authorizeDocumentAccess, handleApiError } from "@/lib/errorHandling";
+import { DocumentIdParam } from "@/types/api";
 
-type RouteParams = {
-  params: Promise<{ documentId: string }>;
-};
-
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(request: Request, { params }: DocumentIdParam) {
   try {
     const { documentId } = await params;
     const auth = await authorizeDocumentAccess(documentId);
@@ -24,7 +21,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(request: Request, { params }: RouteParams) {
+export async function DELETE(request: Request, { params }: DocumentIdParam) {
   try {
     const { documentId } = await params;
     const auth = await authorizeDocumentAccess(documentId);
