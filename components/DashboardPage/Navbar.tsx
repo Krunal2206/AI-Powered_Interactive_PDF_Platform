@@ -1,12 +1,12 @@
 "use client";
 
 import { ClerkLoaded, ClerkLoading, SignedIn, UserButton } from "@clerk/nextjs";
-import { Menu, Upload, X } from "lucide-react";
-import { Button } from "../ui/button";
+import { Upload } from "lucide-react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useMobileMenu } from "@/hooks/useMobileMenu";
+import { MobileMenuButton } from "@/components/MobileMenuButton";
 
 const NAV_LINKS = [
   { href: "/pricing", label: "Pricing" },
@@ -55,12 +55,11 @@ const NavigationItems = ({ onItemClick, isMobile }: NavigationItemsProps) => {
 };
 
 const Navbar = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const pathname = usePathname();
-
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [pathname]);
+  const {
+    isOpen: mobileMenuOpen,
+    close: closeMobileMenu,
+    toggle: toggleMobileMenu,
+  } = useMobileMenu();
 
   return (
     <header className="sticky top-0 z-50 bg-black/20 backdrop-blur-xl border-b border-white/10">
@@ -101,19 +100,11 @@ const Navbar = () => {
             </SignedIn>
 
             <div className="md:hidden">
-              <Button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="text-white p-2"
-                aria-label={"Toggle navigation menu"}
-                aria-expanded={mobileMenuOpen}
-                aria-controls="mobile-nav-menu"
-              >
-                {mobileMenuOpen ? (
-                  <X className="w-6 h-6" />
-                ) : (
-                  <Menu className="w-6 h-6" />
-                )}
-              </Button>
+              <MobileMenuButton
+                isOpen={mobileMenuOpen}
+                onToggle={toggleMobileMenu}
+                ariaControls="mobile-nav-menu"
+              />
             </div>
           </div>
         </div>
@@ -127,7 +118,7 @@ const Navbar = () => {
             <div className="flex flex-col space-y-4">
               <NavigationItems
                 isMobile
-                onItemClick={() => setMobileMenuOpen(false)}
+                onItemClick={closeMobileMenu}
               />
             </div>
           </nav>

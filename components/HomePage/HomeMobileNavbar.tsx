@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { Button } from "../ui/button";
-import { Menu, X } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { type ReactNode } from "react";
+import { useMobileMenu } from "@/hooks/useMobileMenu";
+import { MobileMenuButton } from "@/components/MobileMenuButton";
 
 type HomeMobileNavbarProps = {
   header: ReactNode;
@@ -11,31 +10,18 @@ type HomeMobileNavbarProps = {
 };
 
 const HomeMobileNavbar = ({ header, children }: HomeMobileNavbarProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const pathname = usePathname();
-
-  useEffect(() => {
-    setIsOpen(false);
-  }, [pathname]);
+  const { isOpen, toggle } = useMobileMenu();
 
   return (
     <>
       <div className="flex justify-between items-center py-4">
         {header}
         <div className="md:hidden">
-          <Button
-            type="button"
-            size="icon"
-            onClick={() => setIsOpen((open) => !open)}
-            className="text-white p-2 cursor-pointer"
-            aria-label={
-              isOpen ? "Close navigation menu" : "Open navigation menu"
-            }
-            aria-expanded={isOpen}
-            aria-controls="mobile-navigation-menu"
-          >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </Button>
+          <MobileMenuButton
+            isOpen={isOpen}
+            onToggle={toggle}
+            ariaControls="mobile-navigation-menu"
+          />
         </div>
       </div>
       {isOpen && (
