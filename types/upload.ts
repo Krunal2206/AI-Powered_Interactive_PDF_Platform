@@ -77,3 +77,17 @@ export interface UploadUsageEntry {
 }
 
 export type ReserveResult = { ok: true } | { ok: false; used: number };
+
+export interface UploadRecord {
+  id: string;
+  at: Date;
+  status: "reserved" | "completed";
+  documentId?: string;
+}
+
+export interface UploadUsageSummary {
+  period: string;
+  used: number;
+  uploads: UploadRecord[];
+  history: { period: string; count: number; uploads: UploadRecord[] }[];
+}

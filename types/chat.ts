@@ -17,6 +17,7 @@ export interface ProcessingStats {
 }
 
 export interface ProcessingState {
+  isChecking: boolean;
   isProcessing: boolean;
   isProcessed: boolean;
   error: string | null;
