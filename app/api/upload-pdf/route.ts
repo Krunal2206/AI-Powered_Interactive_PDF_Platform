@@ -7,7 +7,7 @@ import {
 } from "@/lib/firebaseops";
 import { uploadLimiter, applyRateLimit } from "@/lib/rateLimit";
 import { serverEnv } from "@/lib/env";
-import { auth } from "@clerk/nextjs/server";
+import { requireAuth } from "@/lib/errorHandling";
 import { NextRequest, NextResponse } from "next/server";
 import type { UploadApiResponse } from "cloudinary";
 import { randomUUID } from "node:crypto";
@@ -21,47 +21,67 @@ async function releaseQuietly(userId: string, reservationId: string) {
   }
 }
 
+async function validatePdfUpload(
+  formData: FormData,
+): Promise<{ file: File; buffer: Buffer } | { response: NextResponse }> {
+  const file = formData.get("file") as File | null;
+
+  if (!file) {
+    return {
+      response: NextResponse.json({ error: "No file provided" }, { status: 400 }),
+    };
+  }
+
+  if (file.type !== "application/pdf") {
+    return {
+      response: NextResponse.json(
+        { error: "Only PDF files are allowed" },
+        { status: 400 },
+      ),
+    };
+  }
+
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSize) {
+    return {
+      response: NextResponse.json(
+        { error: "File size exceeds 10MB limit" },
+        { status: 400 },
+      ),
+    };
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  if (buffer.subarray(0, 4).toString("ascii") !== "%PDF") {
+    return {
+      response: NextResponse.json(
+        { error: "The uploaded file is not a valid PDF" },
+        { status: 400 },
+      ),
+    };
+  }
+
+  return { file, buffer };
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const authResult = await requireAuth();
+    if (authResult.error) {
+      return authResult.error;
     }
+    const { userId } = authResult;
 
     // Rate limit: 5 uploads per 10 minutes
     const blocked = await applyRateLimit(uploadLimiter, userId);
     if (blocked) return blocked;
 
     const formData = await request.formData();
-    const file = formData.get("file") as File;
+    const validatedUpload = await validatePdfUpload(formData);
+    if ("response" in validatedUpload) return validatedUpload.response;
+
+    const { file, buffer } = validatedUpload;
     const title = file?.name || "Untitled Document";
-
-    if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    }
-
-    if (file.type !== "application/pdf") {
-      return NextResponse.json(
-        { error: "Only PDF files are allowed" },
-        { status: 400 },
-      );
-    }
-
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      return NextResponse.json(
-        { error: "File size exceeds 10MB limit" },
-        { status: 400 },
-      );
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    if (buffer.subarray(0, 4).toString("ascii") !== "%PDF") {
-      return NextResponse.json(
-        { error: "The uploaded file is not a valid PDF" },
-        { status: 400 },
-      );
-    }
 
     // Check the monthly limit and claim a slot in one transaction, so concurrent uploads can't all pass the check.
     const reservationId = randomUUID();

@@ -11,12 +11,9 @@ import {
 } from "@/lib/firebaseChunkOps";
 import { applyRateLimit, processLimiter } from "@/lib/rateLimit";
 import { authorizeDocumentAccess, handleApiError } from "@/lib/errorHandling";
+import { IdParam } from "@/types/api";
 
-type RouteParams = {
-  params: Promise<{ id: string }>;
-};
-
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(request: NextRequest, { params }: IdParam) {
   try {
     const { id: documentId } = await params;
     const auth = await authorizeDocumentAccess(documentId);
@@ -117,7 +114,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: IdParam) {
   try {
     const { id: documentId } = await params;
     const auth = await authorizeDocumentAccess(documentId);
@@ -137,7 +134,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: IdParam) {
   try {
     const { id: documentId } = await params;
     const auth = await authorizeDocumentAccess(documentId);
