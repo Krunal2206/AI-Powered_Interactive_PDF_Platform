@@ -13,6 +13,7 @@ import {
 } from "@/components/DashboardPage/DocumentSearchFilters";
 import { AddDocumentCard } from "@/components/DashboardPage/AddDocumentCard";
 import { useDocumentNavigation } from "@/lib/navigationUtils";
+import { downloadDocument } from "@/lib/downloadUtils";
 import { useToast } from "@/hooks/useToast";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -176,17 +177,7 @@ const Page = () => {
 
   const handleDownloadDocument = async (document: Document) => {
     try {
-      const response = await fetch(document.cloudinaryUrl);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-
-      const a = window.document.createElement("a");
-      a.href = url;
-      a.download = document.originalFilename || `${document.title}.pdf`;
-      window.document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await downloadDocument(document);
     } catch {
       toast.error("Failed to download document. Please try again.");
     }

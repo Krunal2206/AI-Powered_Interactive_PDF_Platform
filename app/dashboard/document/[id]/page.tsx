@@ -27,6 +27,7 @@ import {
   formatFileSize,
   getStatusColor,
 } from "@/lib/documentUtils";
+import { downloadDocument } from "@/lib/downloadUtils";
 import { useToast } from "@/hooks/useToast";
 import { Document as ReactPDFDocument, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -112,19 +113,7 @@ const DocumentViewPage = ({ params }: DocumentViewPageProps) => {
   const handleDownload = async () => {
     try {
       if (document) {
-        const response = await fetch(document.cloudinaryUrl);
-        if (!response.ok) throw new Error("Failed to fetch document");
-
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-
-        const a = window.document.createElement("a");
-        a.href = url;
-        a.download = document.originalFilename || `${document.title}.pdf`;
-        window.document.body.appendChild(a);
-        a.click();
-        window.document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        await downloadDocument(document);
       }
     } catch {
       toast.error("Failed to download document. Please try again.");
