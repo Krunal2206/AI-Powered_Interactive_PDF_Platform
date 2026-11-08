@@ -4,7 +4,9 @@ import {
   DocumentUpdateData,
   DocumentUploadData,
   ReserveResult,
+  UploadRecord,
   UploadUsageEntry,
+  UploadUsageSummary,
 } from "@/types/upload";
 import {
   addDoc,
@@ -22,31 +24,18 @@ import {
   updateDoc,
   where,
   getCountFromServer,
-  writeBatch,
   Transaction,
 } from "firebase/firestore";
+import { convertTimestamp } from "./timestampUtils";
+import { COLLECTIONS } from "@/constants/collections";
+import { batchDeleteDocs } from "./batchUtils";
 
-const COLLECTION_NAME = "pdf-documents";
+const COLLECTION_NAME = COLLECTIONS.DOCUMENTS;
 // One doc per user (keyed by userId) tracking uploads in the current calendar
 // month. Powers the free-tier "10 uploads / month" quota.
-const UPLOAD_USAGE_COLLECTION = "upload-usage";
+const UPLOAD_USAGE_COLLECTION = COLLECTIONS.UPLOAD_USAGE;
 const RESERVATION_TTL_MS = 5 * 60 * 1000; // TTL for reservations, after which they are expired
 const TRANSACTION_OPTIONS = { maxAttempts: 10 }; // Concurrent upload retry attempts
-
-function isTimestampLike(value: unknown): value is { toDate: () => Date } {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "toDate" in value &&
-    typeof value.toDate === "function"
-  );
-}
-
-function convertTimestamp(value: unknown): Date {
-  if (value instanceof Date) return value;
-  if (isTimestampLike(value)) return value.toDate();
-  return new Date();
-}
 
 export async function addDocument(
   documentData: DocumentUploadData,
@@ -189,20 +178,12 @@ export async function deleteDocument(documentId: string): Promise<void> {
 
 export async function deleteChatData(documentId: string): Promise<void> {
   const messagesQuery = query(
-    collection(db, "chat-messages"),
+    collection(db, COLLECTIONS.CHAT_MESSAGES),
     where("documentId", "==", documentId),
   );
   const messagesSnapshot = await getDocs(messagesQuery);
 
-  const BATCH_LIMIT = 500;
-
-  for (let i = 0; i < messagesSnapshot.docs.length; i += BATCH_LIMIT) {
-    const batch = writeBatch(db);
-    messagesSnapshot.docs
-      .slice(i, i + BATCH_LIMIT)
-      .forEach((messageDoc) => batch.delete(messageDoc.ref));
-    await batch.commit();
-  }
+  await batchDeleteDocs(messagesSnapshot.docs);
 }
 
 export async function getUserDocumentCount(userId: string): Promise<number> {
@@ -278,7 +259,7 @@ function archivePreviousPeriod(
   }
 
   transaction.set(
-    doc(db, UPLOAD_USAGE_COLLECTION, userId, "history", data.period),
+    doc(db, UPLOAD_USAGE_COLLECTION, userId, COLLECTIONS.UPLOAD_USAGE_HISTORY, data.period),
     {
       userId,
       period: data.period,
@@ -419,4 +400,58 @@ export async function confirmUploadSlot(
     },
     TRANSACTION_OPTIONS,
   );
+}
+
+function toUploadRecords(raw: unknown): UploadRecord[] {
+  if (!Array.isArray(raw)) return [];
+
+  return (raw as UploadUsageEntry[])
+    .map((entry) => ({
+      id: entry.id,
+      at: convertTimestamp(entry.at),
+      status: entry.status,
+      ...(entry.documentId ? { documentId: entry.documentId } : {}),
+    }))
+    .sort((a, b) => b.at.getTime() - a.at.getTime());
+}
+
+export async function getUploadUsage(
+  userId: string,
+): Promise<UploadUsageSummary> {
+  try {
+    const period = currentUploadPeriod();
+
+    const [usageSnapshot, historySnapshot] = await Promise.all([
+      getDoc(doc(db, UPLOAD_USAGE_COLLECTION, userId)),
+      getDocs(
+        query(
+          collection(db, UPLOAD_USAGE_COLLECTION, userId, COLLECTIONS.UPLOAD_USAGE_HISTORY),
+          orderBy("period", "desc"),
+        ),
+      ),
+    ]);
+
+    const { count, uploads } = readUsage(
+      usageSnapshot.data(),
+      period,
+      Date.now(),
+    );
+
+    return {
+      period,
+      used: count,
+      uploads: toUploadRecords(uploads),
+      history: historySnapshot.docs.map((snapshot) => {
+        const data = snapshot.data();
+        return {
+          period: typeof data.period === "string" ? data.period : snapshot.id,
+          count: typeof data.count === "number" ? data.count : 0,
+          uploads: toUploadRecords(data.uploads),
+        };
+      }),
+    };
+  } catch (error) {
+    console.error("Error reading upload usage:", error);
+    throw new Error("Failed to read upload usage");
+  }
 }
