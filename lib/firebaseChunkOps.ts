@@ -16,9 +16,11 @@ import {
   updateDoc,
   getCountFromServer,
 } from "firebase/firestore";
+import { COLLECTIONS } from "@/constants/collections";
+import { batchProcess, batchDeleteDocs } from "./batchUtils";
 
-const CHUNKS_COLLECTION = "pdf-chunks";
-const PROCESSING_STATUS_COLLECTION = "processing-status";
+const CHUNKS_COLLECTION = COLLECTIONS.CHUNKS;
+const PROCESSING_STATUS_COLLECTION = COLLECTIONS.PROCESSING_STATUS;
 const MIN_EMBEDDED_RATIO = 0.7; // Minimum ratio of chunks that must have embeddings for a document to be considered "processed" to avoid blocking users from chatting due to a few failed embeddings.
 
 export interface ProcessingStatus {
@@ -50,20 +52,7 @@ export interface StoredPDFChunk extends PDFChunk {
   embeddingGeneratedAt?: Date;
 }
 
-function isTimestampLike(value: unknown): value is { toDate: () => Date } {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "toDate" in value &&
-    typeof value.toDate === "function"
-  );
-}
-
-function convertTimestamp(value: unknown): Date {
-  if (value instanceof Date) return value;
-  if (isTimestampLike(value)) return value.toDate();
-  return new Date();
-}
+import { convertTimestamp } from "./timestampUtils";
 
 /**
  * Store PDF chunks in Firestore and generate embeddings
@@ -126,26 +115,18 @@ export async function storePDFChunks(
 }
 
 async function saveChunks(chunks: PDFChunk[]): Promise<void> {
-  const BATCH_LIMIT = 499;
   const chunksCollection = collection(db, CHUNKS_COLLECTION);
 
-  for (let i = 0; i < chunks.length; i += BATCH_LIMIT) {
-    const batch = writeBatch(db);
-    const slice = chunks.slice(i, i + BATCH_LIMIT);
-
-    for (const chunk of slice) {
-      const chunkDoc = doc(chunksCollection, chunk.id);
-      batch.set(chunkDoc, {
-        ...chunk,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-        hasEmbedding: false,
-        embeddingGeneratedAt: null,
-      });
-    }
-
-    await batch.commit();
-  }
+  await batchProcess(chunks, (batch, chunk) => {
+    const chunkDoc = doc(chunksCollection, chunk.id);
+    batch.set(chunkDoc, {
+      ...chunk,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+      hasEmbedding: false,
+      embeddingGeneratedAt: null,
+    });
+  });
 }
 
 async function generateAndMarkEmbeddings(chunks: PDFChunk[]): Promise<number> {
@@ -231,24 +212,13 @@ async function markChunksWithEmbeddings(chunkIds: string[]): Promise<number> {
  */
 export async function deleteDocumentChunks(documentId: string): Promise<void> {
   try {
-    // Delete from Firestore (split into sub-batches of 499)
-    const BATCH_LIMIT = 499;
     const q = query(
       collection(db, CHUNKS_COLLECTION),
       where("metadata.documentId", "==", documentId),
     );
 
     const querySnapshot = await getDocs(q);
-    const docs = querySnapshot.docs;
-
-    for (let i = 0; i < docs.length; i += BATCH_LIMIT) {
-      const batch = writeBatch(db);
-      const slice = docs.slice(i, i + BATCH_LIMIT);
-      slice.forEach((docSnapshot) => {
-        batch.delete(docSnapshot.ref);
-      });
-      await batch.commit();
-    }
+    await batchDeleteDocs(querySnapshot.docs);
 
     // Delete from vector store
     try {
