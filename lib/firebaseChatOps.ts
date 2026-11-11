@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import { ChatMessage } from "@/types/chat";
+import { COLLECTIONS } from "@/constants/collections";
 
 export const addChatMessage = async (
   userId: string,
@@ -21,7 +22,7 @@ export const addChatMessage = async (
   role: "user" | "assistant",
 ) => {
   try {
-    const messagesRef = collection(db, "chat-messages");
+    const messagesRef = collection(db, COLLECTIONS.CHAT_MESSAGES);
 
     const newMessage: Omit<ChatMessage, "id"> = {
       documentId,
@@ -35,7 +36,7 @@ export const addChatMessage = async (
 
     if (role == "user") {
       try {
-        await updateDoc(doc(db, "pdf-documents", documentId), {
+        await updateDoc(doc(db, COLLECTIONS.DOCUMENTS, documentId), {
           totalChats: increment(1),
         });
       } catch (counterError) {
@@ -52,7 +53,7 @@ export const addChatMessage = async (
 
 export const getChatHistory = async (documentId: string, userId: string) => {
   try {
-    const messagesRef = collection(db, "chat-messages");
+    const messagesRef = collection(db, COLLECTIONS.CHAT_MESSAGES);
     const q = query(
       messagesRef,
       where("documentId", "==", documentId),
