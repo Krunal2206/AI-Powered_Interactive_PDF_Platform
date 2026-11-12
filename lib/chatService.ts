@@ -27,7 +27,6 @@ export class ChatService {
   private readonly documentId: string;
   private readonly userId: string;
   private vectorStore?: VectorStoreService;
-  public sessionId?: string;
 
   constructor(documentId: string, userId: string) {
     this.model = new GoogleGenerativeAI(serverEnv.GOOGLE_API_KEY);
@@ -178,10 +177,5 @@ export class ChatService {
       console.error("Error in chat:", error);
       throw error;
     }
-  }
-
-  public async getHistory(): Promise<ChatMessage[]> {
-    if (!this.sessionId) return [];
-    return await getChatHistory(this.documentId, this.userId);
   }
 }
