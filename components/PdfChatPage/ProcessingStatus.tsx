@@ -9,19 +9,7 @@ import {
   RotateCcw,
   Loader2,
 } from "lucide-react";
-
-interface ProcessingState {
-  isChecking: boolean;
-  isProcessing: boolean;
-  isProcessed: boolean;
-  error: string | null;
-  stats: {
-    totalPages: number;
-    totalCharacters: number;
-    totalChunks: number;
-    processingTime: number;
-  } | null;
-}
+import { ProcessingState } from "@/types/chat";
 
 interface ProcessingStatusProps {
   processingState: ProcessingState;
