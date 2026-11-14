@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import EmailTemplate from "@/components/ContactPage/EmailTemplate";
 import { Resend } from "resend";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+import { contactLimiter, applyRateLimit } from "@/lib/rateLimit";
 import { serverEnv } from "@/lib/env";
 
 const resend = new Resend(serverEnv.RESEND_API_KEY);
-
-// Rate limiter: 3 contact submissions per 15 minutes per IP
-const contactLimiter = new Ratelimit({
-  redis: new Redis({
-    url: serverEnv.UPSTASH_REDIS_REST_URL,
-    token: serverEnv.UPSTASH_REDIS_REST_TOKEN,
-  }),
-  limiter: Ratelimit.slidingWindow(3, "15 m"),
-  prefix: "ratelimit:contact",
-});
 
 // Server-side validation constants
 const MAX_NAME_LENGTH = 100;
@@ -33,23 +22,8 @@ export async function POST(request: NextRequest) {
     const forwarded = request.headers.get("x-forwarded-for");
     const ip = forwarded?.split(",")[0]?.trim() ?? request.headers.get("x-real-ip") ?? "unknown";
 
-    const { success, reset } = await contactLimiter.limit(ip);
-
-    if (!success) {
-      const retryAfter = Math.ceil((reset - Date.now()) / 1000);
-      return NextResponse.json(
-        {
-          error: "Too many requests. Please try again later.",
-          retryAfterSeconds: retryAfter,
-        },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(retryAfter),
-          },
-        },
-      );
-    }
+    const blocked = await applyRateLimit(contactLimiter, ip);
+    if (blocked) return blocked;
 
     // --- Parse & Validate Body ---
     let body: unknown;

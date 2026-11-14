@@ -26,11 +26,17 @@ export const chatLimiter = new Ratelimit({
   prefix: "ratelimit:chat",
 });
 
+export const contactLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(3, "15 m"),
+  prefix: "ratelimit:contact",
+});
+
 export async function applyRateLimit(
   limiter: Ratelimit,
-  userId: string,
+  identifier: string,
 ): Promise<NextResponse | null> {
-  const { success, reset } = await limiter.limit(userId);
+  const { success, reset } = await limiter.limit(identifier);
 
   if (!success) {
     const resetInSeconds = Math.ceil((reset - Date.now()) / 1000);
