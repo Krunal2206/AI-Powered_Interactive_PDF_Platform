@@ -7,3 +7,5 @@ export const UPLOAD_CONFIG = {
   },
   MAX_FILES: 1,
 } as const;
+
+export const MONTHLY_UPLOAD_LIMIT = 10;
