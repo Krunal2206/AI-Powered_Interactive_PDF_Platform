@@ -3,6 +3,7 @@ import { Pinecone } from "@pinecone-database/pinecone";
 import { PineconeStore } from "@langchain/pinecone";
 import { PDFChunk } from "./pdfProcessor";
 import { serverEnv } from "./env";
+import { getErrorMessage } from "./errorUtils";
 
 // Helper function to clean text for embedding
 function cleanText(text: string): string {
@@ -13,7 +14,11 @@ function cleanText(text: string): string {
 }
 
 // Singleton instance
-let vectorStoreInstance: VectorStoreService | null = null;
+let vectorStoreInstance: IVectorStoreService | null = null;
+
+export function setVectorStoreInstance(service: IVectorStoreService | null): void {
+  vectorStoreInstance = service;
+}
 
 // Helper functions that match the old interface
 export async function storeDocumentEmbeddings(chunks: PDFChunk[]) {
@@ -27,7 +32,7 @@ export async function deleteDocumentFromVector(documentId: string) {
 }
 
 // Singleton getter
-function getInstance(): VectorStoreService {
+export function getInstance(): IVectorStoreService {
   vectorStoreInstance ??= new VectorStoreService();
   return vectorStoreInstance;
 }
@@ -53,23 +58,62 @@ export interface EmbeddingMetadata {
   totalPages: number;
 }
 
-export class VectorStoreService {
+/**
+ * Interface abstraction for vector store operations (DIP compliance).
+ * Enables swapping Pinecone with alternative providers (Weaviate, Qdrant, in-memory mock).
+ */
+export interface IVectorStoreService {
+  storeChunkEmbeddings(chunks: PDFChunk[]): Promise<{
+    success: boolean;
+    stored: number;
+    skipped: number;
+    storedChunkIds: string[];
+    error?: string;
+  }>;
+  searchSimilarChunks(
+    query: string,
+    documentId: string,
+    options?: {
+      topK?: number;
+      scoreThreshold?: number;
+    },
+  ): Promise<VectorSearchResult[]>;
+  deleteDocumentEmbeddings(documentId: string): Promise<{
+    success: boolean;
+    deleted: number;
+    error?: string;
+  }>;
+}
+
+export interface VectorStoreOptions {
+  embeddings?: GoogleGenerativeAIEmbeddings;
+  pinecone?: Pinecone;
+  indexName?: string;
+}
+
+export class VectorStoreService implements IVectorStoreService {
   private readonly embeddings: GoogleGenerativeAIEmbeddings;
   private readonly pinecone: Pinecone;
   private readonly indexName: string;
   private vectorStore: PineconeStore | null = null;
 
-  constructor() {
-    // Initialize Google Generative AI for embeddings.
-    this.embeddings = new GoogleGenerativeAIEmbeddings({
-      apiKey: serverEnv.GOOGLE_API_KEY,
-      modelName: "gemini-embedding-001",
-    });
+  constructor(options?: VectorStoreOptions) {
+    // Initialize or inject Google Generative AI embeddings
+    this.embeddings =
+      options?.embeddings ??
+      new GoogleGenerativeAIEmbeddings({
+        apiKey: serverEnv.GOOGLE_API_KEY,
+        modelName: "gemini-embedding-001",
+      });
 
-    this.pinecone = new Pinecone({
-      apiKey: serverEnv.PINECONE_API_KEY,
-    });
-    this.indexName = serverEnv.PINECONE_INDEX_NAME;
+    // Initialize or inject Pinecone client
+    this.pinecone =
+      options?.pinecone ??
+      new Pinecone({
+        apiKey: serverEnv.PINECONE_API_KEY,
+      });
+
+    this.indexName = options?.indexName ?? serverEnv.PINECONE_INDEX_NAME;
   }
 
   private async initializeVectorStore(): Promise<PineconeStore> {
@@ -187,7 +231,7 @@ export class VectorStoreService {
         stored: 0,
         skipped: 0,
         storedChunkIds: [],
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       };
     }
   }
@@ -280,7 +324,7 @@ export class VectorStoreService {
       return {
         success: false,
         deleted: 0,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       };
     }
   }
