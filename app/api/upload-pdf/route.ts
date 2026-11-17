@@ -7,7 +7,7 @@ import {
 } from "@/lib/firebaseops";
 import { uploadLimiter, applyRateLimit } from "@/lib/rateLimit";
 import { serverEnv } from "@/lib/env";
-import { requireAuth } from "@/lib/errorHandling";
+import { requireAuth, getErrorMessage } from "@/lib/errorHandling";
 import { NextRequest, NextResponse } from "next/server";
 import type { UploadApiResponse } from "cloudinary";
 import { randomUUID } from "node:crypto";
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: "Upload failed",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: getErrorMessage(error),
       },
       { status: 500 },
     );

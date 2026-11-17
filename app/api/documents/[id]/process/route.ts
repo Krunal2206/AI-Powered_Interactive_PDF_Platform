@@ -10,7 +10,7 @@ import {
   isDocumentProcessed,
 } from "@/lib/firebaseChunkOps";
 import { applyRateLimit, processLimiter } from "@/lib/rateLimit";
-import { authorizeDocumentAccess, handleApiError } from "@/lib/errorHandling";
+import { authorizeDocumentAccess, handleApiError, getErrorMessage } from "@/lib/errorHandling";
 import { IdParam } from "@/types/api";
 
 export async function POST(request: NextRequest, { params }: IdParam) {
@@ -89,22 +89,14 @@ export async function POST(request: NextRequest, { params }: IdParam) {
       });
     } catch (processingError) {
       console.error("Processing error:", processingError);
-      await updateProcessingStatus(
-        statusId,
-        "failed",
-        processingError instanceof Error
-          ? processingError.message
-          : "Unknown error",
-      );
+      const errorMessage = getErrorMessage(processingError);
+      await updateProcessingStatus(statusId, "failed", errorMessage);
       await updateDocument(documentId, { status: "error" });
 
       return NextResponse.json(
         {
           error: "Failed to process document",
-          details:
-            processingError instanceof Error
-              ? processingError.message
-              : "Unknown error",
+          details: errorMessage,
         },
         { status: 500 },
       );
