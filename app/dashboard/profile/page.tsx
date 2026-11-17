@@ -1,9 +1,6 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { useCallback, useEffect, useState } from "react";
-import { getUploadUsage, getUserDocuments } from "@/lib/firebaseops";
-import { Document, UploadUsageSummary } from "@/types/upload";
 import ProfileSkeleton from "@/components/ProfilePage/ProfileSkeleton";
 import DetailRow from "@/components/ProfilePage/DetailRow";
 import {
@@ -23,6 +20,7 @@ import Image from "next/image";
 import UploadQuotaCard from "@/components/ProfilePage/UploadQuotaCard";
 import { MONTHLY_UPLOAD_LIMIT } from "@/constants/upload";
 import { formatFileSize } from "@/lib/upload";
+import { useProfileStats } from "@/hooks/useProfileStats";
 
 const CLERK_MANAGE_URL =
   process.env.NEXT_PUBLIC_CLERK_MANAGE_PROFILE_URL || "#";
@@ -35,83 +33,9 @@ function formatDate(date: Date | string): string {
   });
 }
 
-interface UsageStats {
-  totalDocuments: number;
-  totalStorage: number;
-  totalChats: number;
-  recentUpload: Date | null;
-  processedDocuments: number;
-}
-
 export default function ProfilePage() {
   const { user, isLoaded } = useUser();
-  const [stats, setStats] = useState<UsageStats>({
-    totalDocuments: 0,
-    totalStorage: 0,
-    totalChats: 0,
-    recentUpload: null,
-    processedDocuments: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [usage, setUsage] = useState<UploadUsageSummary | null>(null);
-  const [documentTitles, setDocumentTitles] = useState<Record<string, string>>(
-    {},
-  );
-
-  const loadStats = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      setLoading(true);
-      const [documents, usageSummary]: [Document[], UploadUsageSummary | null] =
-        await Promise.all([
-          getUserDocuments(user.id),
-          getUploadUsage(user.id).catch((error) => {
-            console.error("Error loading upload usage:", error);
-            return null;
-          }),
-        ]);
-
-      setUsage(usageSummary);
-      setDocumentTitles(
-        Object.fromEntries(documents.map((doc) => [doc.id, doc.title])),
-      );
-
-      const totalStorage = documents.reduce(
-        (sum, doc) => sum + (doc.fileSize || 0),
-        0,
-      );
-      const totalChats = documents.reduce(
-        (sum, doc) => sum + (doc.totalChats || 0),
-        0,
-      );
-      const processedDocuments = documents.filter(
-        (doc) => doc.status === "ready",
-      ).length;
-
-      const sortedByDate = [...documents].sort(
-        (a, b) =>
-          new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
-      );
-
-      setStats({
-        totalDocuments: documents.length,
-        totalStorage,
-        totalChats,
-        recentUpload: sortedByDate[0]?.uploadedAt
-          ? new Date(sortedByDate[0].uploadedAt)
-          : null,
-        processedDocuments,
-      });
-    } catch (error) {
-      console.error("Error loading profile stats:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    void loadStats();
-  }, [loadStats]);
+  const { stats, loading, usage, documentTitles } = useProfileStats(user?.id);
 
   if (!isLoaded) {
     return <ProfileSkeleton />;
