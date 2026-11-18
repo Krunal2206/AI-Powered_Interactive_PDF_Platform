@@ -25,9 +25,9 @@ import Link from "next/link";
 interface DocumentCardProps {
   document: Document;
   href: string;
-  onEdit: (document: Document) => void;
-  onDelete: (documentId: string) => void;
-  onDownload: (document: Document) => void;
+  onEdit?: (document: Document) => void;
+  onDelete?: (documentId: string) => void;
+  onDownload?: (document: Document) => void;
 }
 
 const getThumbnailUrl = (cloudinaryUrl: string): string => {
@@ -72,56 +72,64 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
         <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-slate-900 to-transparent" />
       </div>
 
-      {/* Menu button — always on top */}
-      <div className="absolute top-2 right-2 z-10">
-        <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-slate-300 bg-slate-900/60 hover:text-purple-400 hover:bg-purple-500/20 backdrop-blur-sm transition-all duration-300 cursor-pointer"
-              onClick={(e) => e.stopPropagation()}
+      {/* Menu button — only rendered if at least one action callback is provided */}
+      {(onEdit || onDownload || onDelete) && (
+        <div className="absolute top-2 right-2 z-10">
+          <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-slate-300 bg-slate-900/60 hover:text-purple-400 hover:bg-purple-500/20 backdrop-blur-sm transition-all duration-300 cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical size={16} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-48 bg-slate-800 border-slate-700"
             >
-              <MoreVertical size={16} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="w-48 bg-slate-800 border-slate-700"
-          >
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(document);
-              }}
-              className="hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer transition-all duration-300"
-            >
-              <Edit3 size={16} className="mr-2" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                onDownload(document);
-              }}
-              className="hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer transition-all duration-300"
-            >
-              <Download size={16} className="mr-2" />
-              Download
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(document.id);
-              }}
-              className="hover:bg-red-600 text-red-400 hover:text-white cursor-pointer transition-all duration-300"
-            >
-              <Trash2 size={16} className="mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+              {onEdit && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(document);
+                  }}
+                  className="hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer transition-all duration-300"
+                >
+                  <Edit3 size={16} className="mr-2" />
+                  Edit
+                </DropdownMenuItem>
+              )}
+              {onDownload && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDownload(document);
+                  }}
+                  className="hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer transition-all duration-300"
+                >
+                  <Download size={16} className="mr-2" />
+                  Download
+                </DropdownMenuItem>
+              )}
+              {onDelete && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(document.id);
+                  }}
+                  className="hover:bg-red-600 text-red-400 hover:text-white cursor-pointer transition-all duration-300"
+                >
+                  <Trash2 size={16} className="mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
 
       {/* Card body — bottom 40% */}
       <div className="absolute inset-x-0 bottom-0 h-[40%] p-3 flex flex-col justify-between">
