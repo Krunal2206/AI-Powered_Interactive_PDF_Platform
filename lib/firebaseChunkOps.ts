@@ -15,9 +15,12 @@ import {
   writeBatch,
   updateDoc,
   getCountFromServer,
+  Firestore,
 } from "firebase/firestore";
 import { COLLECTIONS } from "@/constants/collections";
 import { batchProcess, batchDeleteDocs } from "./batchUtils";
+import { getErrorMessage } from "./errorUtils";
+import { convertTimestamp } from "./timestampUtils";
 
 const CHUNKS_COLLECTION = COLLECTIONS.CHUNKS;
 const PROCESSING_STATUS_COLLECTION = COLLECTIONS.PROCESSING_STATUS;
@@ -52,14 +55,14 @@ export interface StoredPDFChunk extends PDFChunk {
   embeddingGeneratedAt?: Date;
 }
 
-import { convertTimestamp } from "./timestampUtils";
-
 /**
- * Store PDF chunks in Firestore and generate embeddings
+ * Store PDF chunks in Firestore and generate embeddings.
+ * Accepts optional injected `firestore` instance for DIP.
  */
 export async function storePDFChunks(
   chunks: PDFChunk[],
   generateEmbeddings: boolean = true,
+  firestore: Firestore = db,
 ): Promise<{
   success: boolean;
   chunksStored: number;
@@ -77,10 +80,10 @@ export async function storePDFChunks(
   }
 
   try {
-    await saveChunks(chunks);
+    await saveChunks(chunks, firestore);
 
     const chunksEmbedded = generateEmbeddings
-      ? await generateAndMarkEmbeddings(chunks)
+      ? await generateAndMarkEmbeddings(chunks, firestore)
       : 0;
 
     if (
@@ -109,27 +112,38 @@ export async function storePDFChunks(
       chunksStored: 0,
       chunksEmbedded: 0,
       embeddingsGenerated: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: getErrorMessage(error),
     };
   }
 }
 
-async function saveChunks(chunks: PDFChunk[]): Promise<void> {
-  const chunksCollection = collection(db, CHUNKS_COLLECTION);
+async function saveChunks(
+  chunks: PDFChunk[],
+  firestore: Firestore = db,
+): Promise<void> {
+  const chunksCollection = collection(firestore, CHUNKS_COLLECTION);
 
-  await batchProcess(chunks, (batch, chunk) => {
-    const chunkDoc = doc(chunksCollection, chunk.id);
-    batch.set(chunkDoc, {
-      ...chunk,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-      hasEmbedding: false,
-      embeddingGeneratedAt: null,
-    });
-  });
+  await batchProcess(
+    chunks,
+    (batch, chunk) => {
+      const chunkDoc = doc(chunksCollection, chunk.id);
+      batch.set(chunkDoc, {
+        ...chunk,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        hasEmbedding: false,
+        embeddingGeneratedAt: null,
+      });
+    },
+    undefined,
+    firestore,
+  );
 }
 
-async function generateAndMarkEmbeddings(chunks: PDFChunk[]): Promise<number> {
+async function generateAndMarkEmbeddings(
+  chunks: PDFChunk[],
+  firestore: Firestore = db,
+): Promise<number> {
   try {
     const embeddingResult = await storeDocumentEmbeddings(chunks);
 
@@ -140,6 +154,7 @@ async function generateAndMarkEmbeddings(chunks: PDFChunk[]): Promise<number> {
 
     const markedCount = await markChunksWithEmbeddings(
       embeddingResult.storedChunkIds,
+      firestore,
     );
 
     if (markedCount < chunks.length) {
@@ -158,21 +173,24 @@ async function generateAndMarkEmbeddings(chunks: PDFChunk[]): Promise<number> {
 /**
  * Mark chunks as having embeddings generated
  */
-async function markChunksWithEmbeddings(chunkIds: string[]): Promise<number> {
+async function markChunksWithEmbeddings(
+  chunkIds: string[],
+  firestore: Firestore = db,
+): Promise<number> {
   if (chunkIds.length === 0) return 0;
 
   let chunksMarked = 0;
 
   try {
     // Fetch only the specific chunks that were successfully embedded
-    const chunksCollection = collection(db, CHUNKS_COLLECTION);
+    const chunksCollection = collection(firestore, CHUNKS_COLLECTION);
 
     // Firestore `in` queries are limited to 30 items — process in batches.
     // We also need to respect the 500-operation batch write limit, so we
     // commit a new batch every 499 updates.
     const QUERY_BATCH_SIZE = 30;
     const WRITE_BATCH_LIMIT = 499;
-    let currentBatch = writeBatch(db);
+    let currentBatch = writeBatch(firestore);
     let opsInBatch = 0;
 
     for (let i = 0; i < chunkIds.length; i += QUERY_BATCH_SIZE) {
@@ -184,7 +202,7 @@ async function markChunksWithEmbeddings(chunkIds: string[]): Promise<number> {
         if (opsInBatch >= WRITE_BATCH_LIMIT) {
           await currentBatch.commit();
           chunksMarked += opsInBatch;
-          currentBatch = writeBatch(db);
+          currentBatch = writeBatch(firestore);
           opsInBatch = 0;
         }
         currentBatch.update(docSnapshot.ref, {
@@ -210,15 +228,18 @@ async function markChunksWithEmbeddings(chunkIds: string[]): Promise<number> {
 /**
  * Delete all chunks for a document (both Firestore and vector embeddings)
  */
-export async function deleteDocumentChunks(documentId: string): Promise<void> {
+export async function deleteDocumentChunks(
+  documentId: string,
+  firestore: Firestore = db,
+): Promise<void> {
   try {
     const q = query(
-      collection(db, CHUNKS_COLLECTION),
+      collection(firestore, CHUNKS_COLLECTION),
       where("metadata.documentId", "==", documentId),
     );
 
     const querySnapshot = await getDocs(q);
-    await batchDeleteDocs(querySnapshot.docs);
+    await batchDeleteDocs(querySnapshot.docs, firestore);
 
     // Delete from vector store
     try {
@@ -238,10 +259,11 @@ export async function deleteDocumentChunks(documentId: string): Promise<void> {
  */
 export async function createProcessingStatus(
   documentId: string,
+  firestore: Firestore = db,
 ): Promise<string> {
   try {
     const statusDoc = await addDoc(
-      collection(db, PROCESSING_STATUS_COLLECTION),
+      collection(firestore, PROCESSING_STATUS_COLLECTION),
       {
         documentId,
         status: "pending",
@@ -263,9 +285,10 @@ export async function updateProcessingStatus(
   status: ProcessingStatus["status"],
   error?: string,
   stats?: ProcessingStatus["stats"],
+  firestore: Firestore = db,
 ): Promise<void> {
   try {
-    const statusDoc = doc(db, PROCESSING_STATUS_COLLECTION, statusId);
+    const statusDoc = doc(firestore, PROCESSING_STATUS_COLLECTION, statusId);
     const updateData: {
       status: ProcessingStatus["status"];
       updatedAt: Timestamp;
@@ -301,10 +324,11 @@ export async function updateProcessingStatus(
  */
 export async function getProcessingStatus(
   documentId: string,
+  firestore: Firestore = db,
 ): Promise<ProcessingStatus | null> {
   try {
     const q = query(
-      collection(db, PROCESSING_STATUS_COLLECTION),
+      collection(firestore, PROCESSING_STATUS_COLLECTION),
       where("documentId", "==", documentId),
     );
 
@@ -356,8 +380,9 @@ export async function getProcessingStatus(
 async function countChunks(
   documentId: string,
   onlyEmbedded: boolean,
+  firestore: Firestore = db,
 ): Promise<number> {
-  const chunksRef = collection(db, CHUNKS_COLLECTION);
+  const chunksRef = collection(firestore, CHUNKS_COLLECTION);
   const documentFilter = where("metadata.documentId", "==", documentId);
 
   const q = onlyEmbedded
@@ -385,11 +410,12 @@ function summarizeChunks(totalChunks: number, chunksWithEmbeddings: number) {
  */
 export async function isDocumentProcessed(
   documentId: string,
+  firestore: Firestore = db,
 ): Promise<boolean> {
   try {
     const [totalChunks, chunksWithEmbeddings] = await Promise.all([
-      countChunks(documentId, false),
-      countChunks(documentId, true),
+      countChunks(documentId, false, firestore),
+      countChunks(documentId, true, firestore),
     ]);
     return summarizeChunks(totalChunks, chunksWithEmbeddings).processed;
   } catch (error) {
@@ -407,12 +433,13 @@ export type DocumentProcessingSummary = ReturnType<typeof summarizeChunks> & {
  */
 export async function getProcessingStats(
   documentId: string,
+  firestore: Firestore = db,
 ): Promise<DocumentProcessingSummary | null> {
   try {
     const [totalChunks, chunksWithEmbeddings, status] = await Promise.all([
-      countChunks(documentId, false),
-      countChunks(documentId, true),
-      getProcessingStatus(documentId),
+      countChunks(documentId, false, firestore),
+      countChunks(documentId, true, firestore),
+      getProcessingStatus(documentId, firestore),
     ]);
 
     return {
