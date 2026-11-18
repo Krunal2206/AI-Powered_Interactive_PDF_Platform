@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { UploadIcon } from "lucide-react";
 
 interface DropZoneProps {
-  onDrop: (files: File[]) => void;
   isDragActive: boolean;
   isDragAccept: boolean;
   isDragReject: boolean;

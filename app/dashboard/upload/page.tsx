@@ -65,7 +65,6 @@ const Upload = () => {
         </div>
 
         <DropZone
-          onDrop={onDrop}
           isDragActive={dropzoneConfig.isDragActive}
           isDragAccept={dropzoneConfig.isDragAccept}
           isDragReject={dropzoneConfig.isDragReject}
