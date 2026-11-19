@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Download, FileText, FileCode, FileDown } from "lucide-react";
 import { ChatDisplayMessage } from "@/hooks/useChat";
+import { downloadText } from "@/lib/downloadUtils";
 
 interface ExportChatButtonProps {
   messages: ChatDisplayMessage[];
@@ -144,18 +145,6 @@ function generatePdfHtml(
 </html>`;
 }
 
-function downloadFile(content: string, filename: string, mimeType: string) {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
 function printPdf(html: string) {
   const iframe = document.createElement("iframe");
   iframe.style.position = "fixed";
@@ -212,17 +201,17 @@ export const ExportChatButton = ({
 
     switch (format) {
       case "txt":
-        downloadFile(
+        downloadText(
           generatePlainText(messages, documentTitle),
           `${sanitizedTitle}-chat.txt`,
-          "text/plain",
+          "text/plain"
         );
         break;
       case "md":
-        downloadFile(
+        downloadText(
           generateMarkdown(messages, documentTitle),
           `${sanitizedTitle}-chat.md`,
-          "text/markdown",
+          "text/markdown"
         );
         break;
       case "pdf":
