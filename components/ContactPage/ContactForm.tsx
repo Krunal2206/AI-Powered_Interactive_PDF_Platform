@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/useToast";
+import { getErrorMessage } from "@/lib/errorUtils";
 
 const ContactForm = () => {
   const [name, setName] = useState("");
@@ -45,7 +46,7 @@ const ContactForm = () => {
       setMessage("");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to send your message.",
+        getErrorMessage(error, "Unable to send your message."),
       );
     } finally {
       setIsSubmitting(false);

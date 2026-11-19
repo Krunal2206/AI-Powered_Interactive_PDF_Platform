@@ -1,6 +1,7 @@
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { PDFParse } from "pdf-parse";
 import { Document } from "@langchain/core/documents";
+import { getErrorMessage } from "./errorUtils";
 
 export interface PDFChunk {
   id: string;
@@ -274,8 +275,7 @@ export class PDFProcessor {
 
       return {
         success: false,
-        error:
-          error instanceof Error ? error.message : "Unknown processing error",
+        error: getErrorMessage(error, "Unknown processing error"),
       };
     }
   }
