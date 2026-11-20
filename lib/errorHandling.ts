@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getDocument } from "@/lib/firebaseops";
 import { Document } from "@/types/upload";
+import { getErrorMessage, toError } from "./errorUtils";
+
+export { getErrorMessage, toError };
 
 // ─── Error Classes (Open/Closed Principle) ───────────────────────────────────
 

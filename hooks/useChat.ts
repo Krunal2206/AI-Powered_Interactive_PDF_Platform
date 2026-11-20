@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { getErrorMessage } from "@/lib/errorUtils";
 
 export interface ChatDisplayMessage {
   id: string;
@@ -175,7 +176,7 @@ export function useChat(documentId: string, userId: string): UseChatReturn {
           updateAssistantMessage(assistantId, fullContent);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to send message");
+        setError(getErrorMessage(err, "Failed to send message"));
         setMessages((prev) =>
           prev.filter(
             (m) =>

@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { UploadedFile } from "../types/upload";
 import { UPLOAD_CONFIG } from "../constants/upload";
 import { generateFileId } from "@/lib/upload";
+import { getErrorMessage, toError } from "@/lib/errorUtils";
 
 export const useFileUpload = () => {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -91,7 +92,7 @@ export const useFileUpload = () => {
           clearInterval(progressIntervalRef.current);
           progressIntervalRef.current = null;
         }
-        throw error instanceof Error ? error : new Error("Upload failed");
+        throw toError(error, "Upload failed");
       }
     },
     [updateFileProgress]
@@ -124,8 +125,7 @@ export const useFileUpload = () => {
         });
       } catch (error) {
         updateFileStatus(fileId, "error", {
-          errorMessage:
-            error instanceof Error ? error.message : "Upload failed",
+          errorMessage: getErrorMessage(error, "Upload failed"),
         });
         console.error("Upload failed:", error);
       } finally {
