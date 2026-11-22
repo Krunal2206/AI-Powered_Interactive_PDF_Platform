@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { VectorStoreService } from "./vectorStore";
+import { IVectorStoreService, VectorStoreService } from "./vectorStore";
 import { addChatMessage, getChatHistory } from "./firebaseChatOps";
 import { ChatMessage } from "@/types/chat";
 import { serverEnv } from "./env";
@@ -7,6 +7,37 @@ import { serverEnv } from "./env";
 interface RelevantDocument {
   pageContent: string;
   pageNumber: number;
+}
+
+/**
+ * Abstraction for persisting chat messages.
+ * By default the service uses Firestore (addChatMessage / getChatHistory),
+ * but callers can supply a custom implementation for testing or alternative storage.
+ */
+export interface ChatPersistence {
+  saveMessage(
+    userId: string,
+    documentId: string,
+    content: string,
+    role: "user" | "assistant",
+  ): Promise<string>;
+  getHistory(documentId: string, userId: string): Promise<ChatMessage[]>;
+}
+
+const defaultPersistence: ChatPersistence = {
+  saveMessage: addChatMessage,
+  getHistory: getChatHistory,
+};
+
+/**
+ * Configuration options for ChatService (Dependency Inversion Principle).
+ * Callers can inject custom AI client, model name, vector store, and persistence.
+ */
+export interface ChatServiceOptions {
+  persistence?: ChatPersistence;
+  vectorStore?: IVectorStoreService;
+  generativeAi?: GoogleGenerativeAI;
+  modelName?: string;
 }
 
 const SYSTEM_INSTRUCTION = `You are a helpful AI assistant for answering questions about PDF documents.
@@ -24,29 +55,49 @@ Question: {question}`;
 
 export class ChatService {
   private readonly model: GoogleGenerativeAI;
+  private readonly modelName: string;
   private readonly documentId: string;
   private readonly userId: string;
-  private vectorStore?: VectorStoreService;
+  private readonly persistence: ChatPersistence;
+  private vectorStore?: IVectorStoreService;
 
-  constructor(documentId: string, userId: string) {
-    this.model = new GoogleGenerativeAI(serverEnv.GOOGLE_API_KEY);
+  constructor(
+    documentId: string,
+    userId: string,
+    optionsOrPersistence?: ChatServiceOptions | ChatPersistence,
+  ) {
     this.documentId = documentId;
     this.userId = userId;
+
+    const isOptions =
+      optionsOrPersistence &&
+      ("persistence" in optionsOrPersistence ||
+        "vectorStore" in optionsOrPersistence ||
+        "generativeAi" in optionsOrPersistence ||
+        "modelName" in optionsOrPersistence);
+
+    const opts: ChatServiceOptions = isOptions
+      ? (optionsOrPersistence as ChatServiceOptions)
+      : { persistence: optionsOrPersistence as ChatPersistence | undefined };
+
+    this.persistence = opts.persistence ?? defaultPersistence;
+    this.model =
+      opts.generativeAi ?? new GoogleGenerativeAI(serverEnv.GOOGLE_API_KEY);
+    this.modelName = opts.modelName ?? "gemini-2.5-flash";
+    this.vectorStore = opts.vectorStore;
   }
 
-  private async initVectorStore() {
+  private async initVectorStore(): Promise<IVectorStoreService> {
     this.vectorStore ??= new VectorStoreService();
+    return this.vectorStore;
   }
 
   private async getRelevantDocuments(
     query: string,
   ): Promise<RelevantDocument[]> {
     try {
-      await this.initVectorStore();
-      if (!this.vectorStore) {
-        throw new Error("Vector store not initialized");
-      }
-      const chunks = await this.vectorStore.searchSimilarChunks(
+      const store = await this.initVectorStore();
+      const chunks = await store.searchSimilarChunks(
         query,
         this.documentId,
         { topK: 5 },
@@ -68,7 +119,7 @@ export class ChatService {
     onToken: (token: string) => void,
   ): Promise<string> {
     const model = this.model.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: this.modelName,
       systemInstruction: SYSTEM_INSTRUCTION,
     });
 
@@ -124,8 +175,8 @@ export class ChatService {
   ): Promise<string> {
     try {
       const saveUserMessageStart = performance.now();
-      // Store user message
-      await addChatMessage(this.userId, this.documentId, message, "user");
+      // Store user message via persistence layer
+      await this.persistence.saveMessage(this.userId, this.documentId, message, "user");
 
       console.log(
         `[PERF] Save user message: ${(performance.now() - saveUserMessageStart).toFixed(2)} ms`,
@@ -143,8 +194,8 @@ export class ChatService {
         .join("\n\n");
 
       const historyStart = performance.now();
-      // Get chat history
-      const fullHistory = await getChatHistory(this.documentId, this.userId);
+      // Get chat history via persistence layer
+      const fullHistory = await this.persistence.getHistory(this.documentId, this.userId);
       const history = fullHistory.slice(-20);
 
       console.log(
@@ -165,8 +216,8 @@ export class ChatService {
       );
 
       const saveAssistantMessageStart = performance.now();
-      // Store assistant message
-      await addChatMessage(this.userId, this.documentId, response, "assistant");
+      // Store assistant message via persistence layer
+      await this.persistence.saveMessage(this.userId, this.documentId, response, "assistant");
 
       console.log(
         `[PERF] Save assistant message: ${(performance.now() - saveAssistantMessageStart).toFixed(2)} ms`,
