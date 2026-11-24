@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { PDFToolbar } from "./PDFToolbar";
 import { Document as DocumentType } from "@/types/upload";
 import { useToast } from "@/hooks/useToast";
+import { downloadDocument } from "@/lib/downloadUtils";
 import dynamic from "next/dynamic";
 
 const PDFDocument = dynamic(
@@ -70,19 +71,7 @@ export const PDFViewer = ({ document, isFullscreen, onGoToPage }: PDFViewerProps
   const handleDownload = async () => {
     try {
       if (document) {
-        const response = await fetch(document.cloudinaryUrl);
-        if (!response.ok) throw new Error("Failed to fetch document");
-
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-
-        const a = window.document.createElement("a");
-        a.href = url;
-        a.download = document.originalFilename || `${document.title}.pdf`;
-        window.document.body.appendChild(a);
-        a.click();
-        window.document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        await downloadDocument(document);
       }
     } catch {
       toast.error("Failed to download document. Please try again.");
