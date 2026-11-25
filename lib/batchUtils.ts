@@ -1,4 +1,9 @@
-import { DocumentReference, WriteBatch, writeBatch } from "firebase/firestore";
+import {
+  DocumentReference,
+  Firestore,
+  WriteBatch,
+  writeBatch,
+} from "firebase/firestore";
 import { db } from "@/firebase";
 
 export const FIRESTORE_BATCH_LIMIT = 499;
@@ -15,11 +20,12 @@ export async function batchProcess<T>(
   items: T[],
   operation: (batch: WriteBatch, item: T) => void,
   batchSize: number = FIRESTORE_BATCH_LIMIT,
+  firestore: Firestore = db,
 ): Promise<void> {
   if (items.length === 0) return;
 
   for (let i = 0; i < items.length; i += batchSize) {
-    const batch = writeBatch(db);
+    const batch = writeBatch(firestore);
     const slice = items.slice(i, i + batchSize);
 
     for (const item of slice) {
@@ -36,6 +42,7 @@ export async function batchProcess<T>(
  */
 export async function batchDeleteDocs<T extends DocWithRef>(
   docs: T[],
+  firestore: Firestore = db,
   batchSize: number = FIRESTORE_BATCH_LIMIT,
 ): Promise<void> {
   return batchProcess(
@@ -44,5 +51,6 @@ export async function batchDeleteDocs<T extends DocWithRef>(
       batch.delete(doc.ref);
     },
     batchSize,
+    firestore,
   );
 }
